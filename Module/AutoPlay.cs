@@ -155,7 +155,6 @@ namespace WBAssistantF.Module
                 defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar += 0.01F;
                 Thread.Sleep(100);
             }
-                
         }
     }
 }
