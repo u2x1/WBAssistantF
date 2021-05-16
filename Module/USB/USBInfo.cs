@@ -16,6 +16,7 @@ namespace WBAssistantF.Module.USB
         public int CopiedFileCount;
         public bool Excluded;
         public string[] FileTreeVersions;
+        public string Remark;
 
         public static UsbInfo[] ReadBasicInfos(string path)
         {
@@ -45,24 +46,26 @@ namespace WBAssistantF.Module.USB
                 CopiedFileCount = int.Parse(x[5]),
                 SavePath = x[6],
                 FileTreeVersions = x[7].Split(',').Where(a => a != "").ToArray(),
-                Excluded = bool.Parse(x[8])
+                Excluded = bool.Parse(x[8]),
+                Remark = x[9]
             });
         }
 
         public static void SaveBasicInfos(UsbInfo[] infos)
         {
             string path = "WBAData\\UsbInfos.txt";
-            string infoStr = Utils.Concat(Utils.FMap(infos, (x) =>
-                x.PnpDeviceId + "|" +
-                x.VolumeLabel + "|" +
-                x.PlugInTimes + "|" +
-                x.LastModified + "|" +
-                x.FileCount + "|" +
-                x.CopiedFileCount + "|" +
-                x.SavePath + "|" +
-                Utils.Intersperse(x.FileTreeVersions, ',') + "|" +
-                x.Excluded + "\n"
-                ));
+            string infoStr = Utils.Concat(Utils.FMap(infos, (x) => Utils.Intersperse(new string[] {
+                x.PnpDeviceId,
+                x.VolumeLabel,
+                x.PlugInTimes.ToString(),
+                x.LastModified.ToString(),
+                x.FileCount.ToString(),
+                x.CopiedFileCount.ToString(),
+                x.SavePath,
+                Utils.Intersperse(x.FileTreeVersions, ','),
+                x.Excluded.ToString(),
+                x.Remark
+            }, '|') + "\n"));
             File.WriteAllText(path, infoStr);
         }
     }

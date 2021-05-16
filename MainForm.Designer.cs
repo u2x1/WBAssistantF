@@ -48,6 +48,7 @@ namespace WBAssistantF
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.checkBox2 = new System.Windows.Forms.CheckBox();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.reject_new_device_checkBox = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
             this.extension_textBox = new System.Windows.Forms.TextBox();
             this.checkBox3 = new System.Windows.Forms.CheckBox();
@@ -76,6 +77,11 @@ namespace WBAssistantF
             this.fileCount_label = new System.Windows.Forms.Label();
             this.volumeName_label = new System.Windows.Forms.Label();
             this.fileTree_treeView = new System.Windows.Forms.TreeView();
+            this.tabPage1 = new System.Windows.Forms.TabPage();
+            this.listView1 = new System.Windows.Forms.ListView();
+            this.columnHeader1 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader2 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader3 = new System.Windows.Forms.ColumnHeader();
             this.usbInfo_menu = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.exclude_usbInfo_menuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.remove_usbInfo_menuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -83,7 +89,7 @@ namespace WBAssistantF
             this.removeFileTree_usbInfo_menuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
             this.removeAll_usbInfo_menuItem = new System.Windows.Forms.ToolStripMenuItem();
-            this.reject_new_device_checkBox = new System.Windows.Forms.CheckBox();
+            this.autoArrange_checkBox = new System.Windows.Forms.CheckBox();
             this.notify_menu.SuspendLayout();
             this.tabControl.SuspendLayout();
             this.log_tabPage.SuspendLayout();
@@ -93,6 +99,7 @@ namespace WBAssistantF
             this.groupBox1.SuspendLayout();
             this.usbInfos_tabPage.SuspendLayout();
             this.fileTree_tabPage.SuspendLayout();
+            this.tabPage1.SuspendLayout();
             this.usbInfo_menu.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -106,6 +113,7 @@ namespace WBAssistantF
             // 
             // notify_menu
             // 
+            this.notify_menu.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.notify_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mainWindow_notify_menuItem,
             this.refreshWall_notify_menuItem,
@@ -162,7 +170,7 @@ namespace WBAssistantF
             this.logTextBox.Margin = new System.Windows.Forms.Padding(0);
             this.logTextBox.Name = "logTextBox";
             this.logTextBox.ReadOnly = true;
-            this.logTextBox.Size = new System.Drawing.Size(613, 327);
+            this.logTextBox.Size = new System.Drawing.Size(626, 359);
             this.logTextBox.TabIndex = 1;
             this.logTextBox.Text = "";
             // 
@@ -172,11 +180,12 @@ namespace WBAssistantF
             this.tabControl.Controls.Add(this.config_tabPage);
             this.tabControl.Controls.Add(this.usbInfos_tabPage);
             this.tabControl.Controls.Add(this.fileTree_tabPage);
+            this.tabControl.Controls.Add(this.tabPage1);
             this.tabControl.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl.Location = new System.Drawing.Point(0, 0);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(640, 393);
+            this.tabControl.Size = new System.Drawing.Size(663, 393);
             this.tabControl.TabIndex = 2;
             // 
             // log_tabPage
@@ -185,7 +194,7 @@ namespace WBAssistantF
             this.log_tabPage.Location = new System.Drawing.Point(4, 24);
             this.log_tabPage.Name = "log_tabPage";
             this.log_tabPage.Padding = new System.Windows.Forms.Padding(3);
-            this.log_tabPage.Size = new System.Drawing.Size(619, 333);
+            this.log_tabPage.Size = new System.Drawing.Size(632, 365);
             this.log_tabPage.TabIndex = 0;
             this.log_tabPage.Text = "日志";
             this.log_tabPage.UseVisualStyleBackColor = true;
@@ -199,7 +208,7 @@ namespace WBAssistantF
             this.config_tabPage.Location = new System.Drawing.Point(4, 24);
             this.config_tabPage.Name = "config_tabPage";
             this.config_tabPage.Padding = new System.Windows.Forms.Padding(3);
-            this.config_tabPage.Size = new System.Drawing.Size(632, 365);
+            this.config_tabPage.Size = new System.Drawing.Size(655, 365);
             this.config_tabPage.TabIndex = 1;
             this.config_tabPage.Text = "配置";
             this.config_tabPage.UseVisualStyleBackColor = true;
@@ -239,6 +248,7 @@ namespace WBAssistantF
             // 
             // groupBox2
             // 
+            this.groupBox2.Controls.Add(this.autoArrange_checkBox);
             this.groupBox2.Controls.Add(this.reject_new_device_checkBox);
             this.groupBox2.Controls.Add(this.label1);
             this.groupBox2.Controls.Add(this.extension_textBox);
@@ -249,15 +259,26 @@ namespace WBAssistantF
             this.groupBox2.Controls.Add(this.savePath_textBox);
             this.groupBox2.Location = new System.Drawing.Point(13, 83);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Size = new System.Drawing.Size(611, 131);
+            this.groupBox2.Size = new System.Drawing.Size(611, 157);
             this.groupBox2.TabIndex = 9;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "USB";
             // 
+            // reject_new_device_checkBox
+            // 
+            this.reject_new_device_checkBox.AutoSize = true;
+            this.reject_new_device_checkBox.Location = new System.Drawing.Point(11, 46);
+            this.reject_new_device_checkBox.Name = "reject_new_device_checkBox";
+            this.reject_new_device_checkBox.Size = new System.Drawing.Size(117, 19);
+            this.reject_new_device_checkBox.TabIndex = 9;
+            this.reject_new_device_checkBox.Text = "拒绝新设备写入";
+            this.reject_new_device_checkBox.UseVisualStyleBackColor = true;
+            this.reject_new_device_checkBox.CheckedChanged += new System.EventHandler(this.reject_new_device_checkBox_CheckedChanged);
+            // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(7, 72);
+            this.label1.Location = new System.Drawing.Point(7, 95);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(49, 15);
             this.label1.TabIndex = 3;
@@ -265,7 +286,7 @@ namespace WBAssistantF
             // 
             // extension_textBox
             // 
-            this.extension_textBox.Location = new System.Drawing.Point(79, 68);
+            this.extension_textBox.Location = new System.Drawing.Point(79, 91);
             this.extension_textBox.Name = "extension_textBox";
             this.extension_textBox.Size = new System.Drawing.Size(300, 23);
             this.extension_textBox.TabIndex = 2;
@@ -283,7 +304,7 @@ namespace WBAssistantF
             // 
             // savePathSave_btn
             // 
-            this.savePathSave_btn.Location = new System.Drawing.Point(389, 97);
+            this.savePathSave_btn.Location = new System.Drawing.Point(389, 120);
             this.savePathSave_btn.Name = "savePathSave_btn";
             this.savePathSave_btn.Size = new System.Drawing.Size(75, 23);
             this.savePathSave_btn.TabIndex = 7;
@@ -293,7 +314,7 @@ namespace WBAssistantF
             // 
             // extensionSave_btn
             // 
-            this.extensionSave_btn.Location = new System.Drawing.Point(389, 68);
+            this.extensionSave_btn.Location = new System.Drawing.Point(389, 91);
             this.extensionSave_btn.Name = "extensionSave_btn";
             this.extensionSave_btn.Size = new System.Drawing.Size(75, 23);
             this.extensionSave_btn.TabIndex = 4;
@@ -304,7 +325,7 @@ namespace WBAssistantF
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(7, 101);
+            this.label2.Location = new System.Drawing.Point(7, 124);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(62, 15);
             this.label2.TabIndex = 6;
@@ -312,7 +333,7 @@ namespace WBAssistantF
             // 
             // savePath_textBox
             // 
-            this.savePath_textBox.Location = new System.Drawing.Point(79, 97);
+            this.savePath_textBox.Location = new System.Drawing.Point(79, 120);
             this.savePath_textBox.Name = "savePath_textBox";
             this.savePath_textBox.Size = new System.Drawing.Size(300, 23);
             this.savePath_textBox.TabIndex = 5;
@@ -327,7 +348,7 @@ namespace WBAssistantF
             this.groupBox1.Controls.Add(this.enUnit_textBox);
             this.groupBox1.Controls.Add(this.checkBox5);
             this.groupBox1.Controls.Add(this.checkBox4);
-            this.groupBox1.Location = new System.Drawing.Point(13, 220);
+            this.groupBox1.Location = new System.Drawing.Point(13, 259);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(611, 136);
             this.groupBox1.TabIndex = 3;
@@ -415,7 +436,7 @@ namespace WBAssistantF
             this.usbInfos_tabPage.Location = new System.Drawing.Point(4, 24);
             this.usbInfos_tabPage.Name = "usbInfos_tabPage";
             this.usbInfos_tabPage.Padding = new System.Windows.Forms.Padding(3);
-            this.usbInfos_tabPage.Size = new System.Drawing.Size(619, 333);
+            this.usbInfos_tabPage.Size = new System.Drawing.Size(632, 365);
             this.usbInfos_tabPage.TabIndex = 2;
             this.usbInfos_tabPage.Text = "USB信息";
             this.usbInfos_tabPage.UseVisualStyleBackColor = true;
@@ -436,7 +457,7 @@ namespace WBAssistantF
             this.usbInfo_TreeView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.usbInfo_TreeView.Location = new System.Drawing.Point(3, 3);
             this.usbInfo_TreeView.Name = "usbInfo_TreeView";
-            this.usbInfo_TreeView.Size = new System.Drawing.Size(613, 327);
+            this.usbInfo_TreeView.Size = new System.Drawing.Size(626, 359);
             this.usbInfo_TreeView.TabIndex = 0;
             this.usbInfo_TreeView.DoubleClick += new System.EventHandler(this.usbInfo_TreeView_DoubleClick);
             this.usbInfo_TreeView.MouseClick += new System.Windows.Forms.MouseEventHandler(this.usbInfo_TreeView_MouseClick);
@@ -454,7 +475,7 @@ namespace WBAssistantF
             this.fileTree_tabPage.Location = new System.Drawing.Point(4, 24);
             this.fileTree_tabPage.Name = "fileTree_tabPage";
             this.fileTree_tabPage.Padding = new System.Windows.Forms.Padding(3);
-            this.fileTree_tabPage.Size = new System.Drawing.Size(619, 333);
+            this.fileTree_tabPage.Size = new System.Drawing.Size(632, 365);
             this.fileTree_tabPage.TabIndex = 3;
             this.fileTree_tabPage.Text = "文件树";
             this.fileTree_tabPage.UseVisualStyleBackColor = true;
@@ -465,7 +486,7 @@ namespace WBAssistantF
             this.jump_to_usbinfo_label.Dock = System.Windows.Forms.DockStyle.Fill;
             this.jump_to_usbinfo_label.Location = new System.Drawing.Point(3, 3);
             this.jump_to_usbinfo_label.Name = "jump_to_usbinfo_label";
-            this.jump_to_usbinfo_label.Size = new System.Drawing.Size(613, 327);
+            this.jump_to_usbinfo_label.Size = new System.Drawing.Size(626, 359);
             this.jump_to_usbinfo_label.TabIndex = 5;
             this.jump_to_usbinfo_label.Text = "请转到USB信息并选择一个文件树版本。";
             this.jump_to_usbinfo_label.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -536,13 +557,60 @@ namespace WBAssistantF
             | System.Windows.Forms.AnchorStyles.Right)));
             this.fileTree_treeView.Location = new System.Drawing.Point(3, 30);
             this.fileTree_treeView.Name = "fileTree_treeView";
-            this.fileTree_treeView.Size = new System.Drawing.Size(613, 300);
+            this.fileTree_treeView.Size = new System.Drawing.Size(626, 332);
             this.fileTree_treeView.TabIndex = 0;
             this.fileTree_treeView.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.fileTree_treeView_BeforeExpand);
             this.fileTree_treeView.DoubleClick += new System.EventHandler(this.fileTree_treeView_DoubleClick);
             // 
+            // tabPage1
+            // 
+            this.tabPage1.Controls.Add(this.listView1);
+            this.tabPage1.Location = new System.Drawing.Point(4, 24);
+            this.tabPage1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.tabPage1.Name = "tabPage1";
+            this.tabPage1.Padding = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.tabPage1.Size = new System.Drawing.Size(632, 365);
+            this.tabPage1.TabIndex = 4;
+            this.tabPage1.Text = "播放列表";
+            this.tabPage1.UseVisualStyleBackColor = true;
+            // 
+            // listView1
+            // 
+            this.listView1.AllowDrop = true;
+            this.listView1.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.columnHeader1,
+            this.columnHeader2,
+            this.columnHeader3});
+            this.listView1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.listView1.HideSelection = false;
+            this.listView1.Location = new System.Drawing.Point(3, 2);
+            this.listView1.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
+            this.listView1.Name = "listView1";
+            this.listView1.Size = new System.Drawing.Size(626, 361);
+            this.listView1.TabIndex = 0;
+            this.listView1.UseCompatibleStateImageBehavior = false;
+            this.listView1.View = System.Windows.Forms.View.Details;
+            this.listView1.DragDrop += new System.Windows.Forms.DragEventHandler(this.listView1_DragDrop);
+            this.listView1.DragEnter += new System.Windows.Forms.DragEventHandler(this.listView1_DragEnter);
+            // 
+            // columnHeader1
+            // 
+            this.columnHeader1.Text = "文件名";
+            this.columnHeader1.Width = 160;
+            // 
+            // columnHeader2
+            // 
+            this.columnHeader2.Text = "时长";
+            this.columnHeader2.Width = 120;
+            // 
+            // columnHeader3
+            // 
+            this.columnHeader3.Text = "播放时间";
+            this.columnHeader3.Width = 200;
+            // 
             // usbInfo_menu
             // 
+            this.usbInfo_menu.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.usbInfo_menu.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.exclude_usbInfo_menuItem,
             this.remove_usbInfo_menuItem,
@@ -588,26 +656,28 @@ namespace WBAssistantF
             this.removeAll_usbInfo_menuItem.Size = new System.Drawing.Size(186, 22);
             this.removeAll_usbInfo_menuItem.Text = "移除该USB所有数据";
             // 
-            // reject_new_device_checkBox
+            // autoArrange_checkBox
             // 
-            this.reject_new_device_checkBox.AutoSize = true;
-            this.reject_new_device_checkBox.Location = new System.Drawing.Point(11, 46);
-            this.reject_new_device_checkBox.Name = "reject_new_device_checkBox";
-            this.reject_new_device_checkBox.Size = new System.Drawing.Size(117, 19);
-            this.reject_new_device_checkBox.TabIndex = 9;
-            this.reject_new_device_checkBox.Text = "拒绝新设备写入";
-            this.reject_new_device_checkBox.UseVisualStyleBackColor = true;
-            this.reject_new_device_checkBox.CheckedChanged += new System.EventHandler(this.reject_new_device_checkBox_CheckedChanged);
+            this.autoArrange_checkBox.AutoSize = true;
+            this.autoArrange_checkBox.Location = new System.Drawing.Point(10, 70);
+            this.autoArrange_checkBox.Name = "autoArrange_checkBox";
+            this.autoArrange_checkBox.Size = new System.Drawing.Size(130, 19);
+            this.autoArrange_checkBox.TabIndex = 10;
+            this.autoArrange_checkBox.Text = "自动整理桌面图标";
+            this.autoArrange_checkBox.UseVisualStyleBackColor = true;
+            this.autoArrange_checkBox.CheckedChanged += new System.EventHandler(this.autoArrange_checkBox_CheckedChanged);
             // 
             // MainForm
             // 
+            this.AllowDrop = true;
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(640, 393);
+            this.ClientSize = new System.Drawing.Size(663, 393);
             this.Controls.Add(this.tabControl);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "MainForm";
             this.Opacity = 0D;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
             this.Text = "WBAssistantF";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             this.Load += new System.EventHandler(this.Form1_Load);
@@ -625,6 +695,7 @@ namespace WBAssistantF
             this.usbInfos_tabPage.ResumeLayout(false);
             this.fileTree_tabPage.ResumeLayout(false);
             this.fileTree_tabPage.PerformLayout();
+            this.tabPage1.ResumeLayout(false);
             this.usbInfo_menu.ResumeLayout(false);
             this.ResumeLayout(false);
 
@@ -672,7 +743,6 @@ namespace WBAssistantF
         private System.Windows.Forms.ToolStripSeparator toolStripSeparator2;
         private System.Windows.Forms.ToolStripMenuItem removeAll_usbInfo_menuItem;
         private System.Windows.Forms.ToolStripMenuItem mainWindow_notify_menuItem;
-        private System.Windows.Forms.ToolStripMenuItem ppt_MenuItem;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.GroupBox groupBox2;
         private System.Windows.Forms.GroupBox groupBox1;
@@ -690,6 +760,12 @@ namespace WBAssistantF
         private System.Windows.Forms.TextBox search_textBox;
         private System.Windows.Forms.Label no_result_label;
         private System.Windows.Forms.CheckBox reject_new_device_checkBox;
+        private System.Windows.Forms.TabPage tabPage1;
+        private System.Windows.Forms.ListView listView1;
+        private System.Windows.Forms.ColumnHeader columnHeader1;
+        private System.Windows.Forms.ColumnHeader columnHeader2;
+        private System.Windows.Forms.ColumnHeader columnHeader3;
+        private System.Windows.Forms.CheckBox autoArrange_checkBox;
     }
 }
 

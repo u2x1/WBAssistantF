@@ -42,10 +42,11 @@
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.0.0" />
     <PackageReference Include="System.Management" Version="5.0.0" />
+    <PackageReference Include="Xabe.FFmpeg" Version="4.4.1" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\WallEffect\WallEffect.csproj" />
+    <ProjectReference Include="..\WallEffect\WPFWindow.csproj" />
   </ItemGroup>
 
   <ItemGroup>

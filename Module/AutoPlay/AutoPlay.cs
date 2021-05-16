@@ -1,13 +1,12 @@
-﻿using System;
+﻿using NAudio.CoreAudioApi;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading;
-using NAudio.CoreAudioApi;
-using Shell32;
 
 
-namespace WBAssistantF.Module
+namespace WBAssistantF.Module.AutoPlay
 {
     internal class AutoPlay
     {
@@ -16,6 +15,9 @@ namespace WBAssistantF.Module
         {
             _logger = lgr;
         }
+
+        
+
         public void CheckFtp(MainForm form, bool forceCheck = false)
         {
             if (!forceCheck)
@@ -52,7 +54,7 @@ namespace WBAssistantF.Module
                     {
                         if (file.IndexOf(filename, StringComparison.Ordinal) == -1) continue;
                         OpenFile(file);
-                        adjustVolume();
+                        adjustVolume(0.7f);
                         return;
                     }
                 }
@@ -139,18 +141,18 @@ namespace WBAssistantF.Module
             p.Start();
         }
 
-        private void adjustVolume()
+        private void adjustVolume(float value)
         {
             MMDeviceEnumerator devEnum = new MMDeviceEnumerator();
             MMDevice defaultDevice = devEnum.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
             defaultDevice.AudioEndpointVolume.Mute = false;
-            while (defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar > 0.5F)
+            while (defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar > value)
             {
                 defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar -= 0.01F;
                 Thread.Sleep(100);
             }
-                
-            while (defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar < 0.5F)
+
+            while (defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar < value)
             {
                 defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar += 0.01F;
                 Thread.Sleep(100);

@@ -13,6 +13,8 @@ namespace WBAssistantF.Module.USB
         private readonly Logger _logger;
         private readonly Config _cfg;
         private readonly List<UsbInfo> _infos;
+        public delegate void USBChangeHandler(bool IsInsert, UsbInfo info);
+        public event USBChangeHandler USBChange;
 
         public Copier(Logger lgr, ref Config config, ref List<UsbInfo> info)
         {
@@ -24,15 +26,36 @@ namespace WBAssistantF.Module.USB
         public void StartCopierListen()
         {
             _logger.LogC("USB监控已启动");
+
+            // insertion detect
             var watcher = new ManagementEventWatcher();
             var query = new WqlEventQuery(
                 "SELECT * FROM __InstanceOperationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_DiskDrive' AND TargetInstance.InterfaceType = 'USB'");
             watcher.EventArrived += Watcher_EventArrived;
             watcher.Query = query;
             watcher.Start();
+
+            // removal detect
+            WqlEventQuery removeQuery = new WqlEventQuery("SELECT * FROM __InstanceDeletionEvent WITHIN 2 WHERE TargetInstance ISA 'Win32_USBHub'");
+            ManagementEventWatcher removeWatcher = new ManagementEventWatcher(removeQuery);
+            removeWatcher.EventArrived += new EventArrivedEventHandler(DeviceRemovedEvent);
+            removeWatcher.Start();
+
             while (true)
                 watcher.WaitForNextEvent();
         }
+
+        private void DeviceRemovedEvent(object sender, EventArrivedEventArgs e)
+        {
+            if (!(e.NewEvent.Properties["TargetInstance"].Value is ManagementBaseObject mbo)) return;
+            var pnpDeviceId = mbo.Properties["PNPDeviceID"].Value.ToString();
+            foreach (var info in _infos)
+            {
+                if (info.PnpDeviceId == pnpDeviceId)
+                    USBChange(false, info);
+            }
+        }
+
         private void Watcher_EventArrived(object sender, EventArrivedEventArgs e)
         {
             if (!(e.NewEvent.Properties["TargetInstance"].Value is ManagementBaseObject mbo)) return;
@@ -125,7 +148,7 @@ namespace WBAssistantF.Module.USB
 
 
 
-            _logger.LogI($"复制了 {copyCnt} 个文件，{existCnt} 个文件已存在无需覆盖，发生了 {errorCnt} 个错误");
+            _logger.LogI($"复制了 {copyCnt} 个文件，跳过了 {existCnt} 个文件，发生了 {errorCnt} 个错误");
 
 
             _logger.LogI("写入复制文件信息并转储文件树");
@@ -163,6 +186,7 @@ namespace WBAssistantF.Module.USB
             info.LastModified = DateTimeOffset.Now.ToUnixTimeSeconds();
 
             _infos[index] = info;
+            USBChange(true, info);
 
             UsbInfo.SaveBasicInfos(_infos.ToArray());
         }
@@ -206,6 +230,7 @@ namespace WBAssistantF.Module.USB
                     }
                 }
 
+                // if there is no corresponding USBInfo, create one
                 _infos.Add(new UsbInfo
                 {
                     PnpDeviceId = pnpDeviceId,
@@ -214,7 +239,8 @@ namespace WBAssistantF.Module.USB
                     PlugInTimes = 0,
                     Excluded = false,
                     FileTreeVersions = Array.Empty<string>(),
-                    LastModified = DateTimeOffset.Now.ToUnixTimeSeconds()
+                    LastModified = DateTimeOffset.Now.ToUnixTimeSeconds(),
+                    Remark = "未知"
                 });
                 CopyFiles(_infos.Count - 1, driveLetter);
             }

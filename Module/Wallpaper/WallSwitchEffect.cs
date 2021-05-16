@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 
 namespace WBAssistantF.Module.Wallpaper
 {
-    class WallSwitchEffect
+    internal class WallSwitchEffect
     {
         public static BitmapSource ToBitmapSource(Bitmap btmap)
         {
@@ -97,12 +97,12 @@ namespace WBAssistantF.Module.Wallpaper
             window.Left = -7;
             window.Top = -7;
 
-            window.inAnimation(action);
+            window.InAnimation(action);
         }
 
         public void outEffect()
         {
-            window.outAnimation();
+            window.OutAnimation();
         }
 
         public void release()

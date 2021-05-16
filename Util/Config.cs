@@ -15,6 +15,7 @@ namespace WBAssistantF
         public string AutoPlay_EnAudio_Unit = "1";
         public string AutoPlay_EnAudio_FileName = "words and expressions";
         public bool RejectNewDevice = true;
+        public bool EnableDesktopArrange = false;
 
         public static Config ParseConfig(string path, Logger logger)
         {
@@ -33,6 +34,7 @@ namespace WBAssistantF
                     AutoPlay_EnAudio_Unit = cfg[6],
                     AutoPlay_EnAudio_FileName = cfg[7],
                     RejectNewDevice = bool.Parse(cfg[8]),
+                    EnableDesktopArrange = bool.Parse(cfg[9])
                 };
             }
             catch (Exception e)
@@ -64,6 +66,7 @@ namespace WBAssistantF
                     AutoPlay_EnAudio_Unit,
                     AutoPlay_EnAudio_FileName,
                     RejectNewDevice.ToString(),
+                    EnableDesktopArrange.ToString(),
                 }, '\n');
 
             try

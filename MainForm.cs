@@ -1,14 +1,16 @@
 ﻿using Microsoft.Win32;
+using Shell32;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using WBAssistantF.Module;
+using WBAssistantF.Module.AutoPlay;
 using WBAssistantF.Module.USB;
 using WBAssistantF.Module.Wallpaper;
-using Shell32;
+using Xabe.FFmpeg;
 
 namespace WBAssistantF
 {
@@ -21,8 +23,9 @@ namespace WBAssistantF
         private readonly Logger logger;
         private readonly Copier copier;
         private readonly Config cfg;
-        private readonly List<UsbInfo> infos;
         private readonly AutoPlay autoPlay;
+        private readonly DesktopArrange desktopArrange;
+        private List<UsbInfo> infos;
         private UsbInfo selectedInfo;
         private RFileNodeL fileNodeL; // file node of currently selected usb
         private RFileNode fileNodeS;  // same as above
@@ -30,13 +33,17 @@ namespace WBAssistantF
         public MainForm()
         {
             Environment.CurrentDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+
             InitializeComponent();
+            Location = new Point(Screen.PrimaryScreen.WorkingArea.Width - Width,
+                     Screen.PrimaryScreen.WorkingArea.Height - Height);
             LogTextBox = logTextBox;
             logger = new Logger(this);
             cfg = Config.ParseConfig("WBAData\\config.txt", logger);
             infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos("WBAData\\UsbInfos.txt"));
             copier = new Copier(logger, ref cfg, ref infos);
             autoPlay = new AutoPlay(logger);
+            if (cfg.EnableDesktopArrange) { desktopArrange = new DesktopArrange(copier, logger); }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -65,6 +72,8 @@ namespace WBAssistantF
             checkBox3.Checked = cfg.AutoOpenExplorer;
             checkBox4.Checked = cfg.AutoPlay_FTP;
             checkBox5.Checked = cfg.AutoPlay_EnAudio;
+            reject_new_device_checkBox.Checked = cfg.RejectNewDevice;
+            autoArrange_checkBox.Checked = cfg.EnableDesktopArrange;
 
             extension_textBox.Text = Utils.Intersperse(cfg.Extension, ',');
             savePath_textBox.Text = cfg.SavePath;
@@ -82,6 +91,46 @@ namespace WBAssistantF
         }
 
         #region USBInfo UI logic
+
+        /// <summary>
+        /// refresh USBInfo tabpage
+        /// </summary>
+        public void RefreshUsbInfos()
+        {
+            try
+            {
+                infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos("WBAData\\UsbInfos.txt"));
+                usbInfo_TreeView.BeginUpdate();
+                usbInfo_TreeView.Nodes.Clear();
+
+                for (int i = 0; i < infos.Count; ++i)
+                {
+                    UsbInfo info = infos[i];
+                    DateTime lastMdTime = DateTimeOffset.FromUnixTimeSeconds(info.LastModified).LocalDateTime;
+
+                    usbInfo_TreeView.Nodes.Add($"{info.Remark} ({info.VolumeLabel}) ({calculateLastTime(lastMdTime)})");
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("最后修改: " + lastMdTime.ToString("yyyy-MM-dd HH:mm"));
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("插入次数: " + info.PlugInTimes);
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("白名单: " + info.Excluded);
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("总文件数: " + info.FileCount);
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("已复制文件数: " + info.CopiedFileCount);
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("保存路径: " + info.SavePath);
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("设备PNP: " + info.PnpDeviceId);
+                    usbInfo_TreeView.Nodes[i].Nodes.Add("文件树");
+                    foreach (string x in info.FileTreeVersions)
+                    {
+                        usbInfo_TreeView.Nodes[i].Nodes[7].Nodes.Add(x[..^2] + ":" + x[^2..]);
+                    }
+                }
+                usbInfo_TreeView.EndUpdate();
+            }
+            catch (Exception ex)
+            {
+                usbInfo_TreeView.EndUpdate();
+                logger.LogE($"刷新USB信息时出现了错误：\n{ex.Message}");
+            }
+        }
+
         private void usbInfo_TreeView_DoubleClick(object sender, EventArgs e)
         {
             fileNodeL = null;
@@ -117,7 +166,6 @@ namespace WBAssistantF
                 refreshFileTreeView(fileNodeL);
             }
         }
-
 
         private void usbInfo_TreeView_MouseClick(object sender, MouseEventArgs e)
         {
@@ -159,7 +207,7 @@ namespace WBAssistantF
             else if (item == remove_usbInfo_menuItem)
             {
                 DialogResult rst = MessageBox.Show("删除保存的USB信息数据？(已复制的文件不会被删除)", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
-                if (rst == DialogResult.Yes)
+                if (rst == DialogResult.OK)
                 {
                     infos.RemoveAt(index);
                     UsbInfo.SaveBasicInfos(infos.ToArray());
@@ -171,8 +219,8 @@ namespace WBAssistantF
                 int usbIndex = usbInfo_TreeView.SelectedNode.Parent.Parent.Index;
                 string ver = infos[usbIndex].FileTreeVersions[index];
 
-                DialogResult rst = MessageBox.Show("删除文件树 " + ver + " ？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
-                if (rst == DialogResult.Yes)
+                DialogResult rst = MessageBox.Show("删除文件树 [" + ver + "] ？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
+                if (rst == DialogResult.OK)
                 {
                     infos.RemoveAt(index);
                     UsbInfo.SaveBasicInfos(infos.ToArray());
@@ -182,7 +230,7 @@ namespace WBAssistantF
             else if (item == removeAll_usbInfo_menuItem)
             {
                 DialogResult rst = MessageBox.Show("删除有关该USB设备的所有数据？(所有已复制文件都会被删除)", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
-                if (rst == DialogResult.Yes)
+                if (rst == DialogResult.OK)
                 {
                     try
                     {
@@ -287,7 +335,7 @@ namespace WBAssistantF
 
         private void notifyIcon_MouseUp(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left) { new Shell().ToggleDesktop(); }
+            if (e.Button == MouseButtons.Left) { Show(); }
         }
 
         private void Form1_Shown(object sender, EventArgs e)
@@ -328,8 +376,8 @@ namespace WBAssistantF
             }
             else if (item == EnglishUnitPlusMenuItem)
             {
-                cfg.AutoPlay_EnAudio_Unit = cfg.AutoPlay_EnAudio_Unit[0] >= '8' 
-                    ? "0" 
+                cfg.AutoPlay_EnAudio_Unit = cfg.AutoPlay_EnAudio_Unit[0] >= '8'
+                    ? "0"
                     : (cfg.AutoPlay_EnAudio_Unit[0] - '0' + 1).ToString();
                 cfg.SaveConfig();
                 enUnit_textBox.Text = cfg.AutoPlay_EnAudio_Unit;
@@ -340,43 +388,6 @@ namespace WBAssistantF
 
         #region Helper
 
-        /// <summary>
-        /// refresh USBInfo tabpage
-        /// </summary>
-        public void RefreshUsbInfos()
-        {
-            try
-            {
-                usbInfo_TreeView.BeginUpdate();
-                usbInfo_TreeView.Nodes.Clear();
-                for (int i = 0; i < infos.Count; ++i)
-                {
-
-                    UsbInfo info = infos[i];
-                    DateTime lastMdTime = DateTimeOffset.FromUnixTimeSeconds(info.LastModified).LocalDateTime;
-
-                    usbInfo_TreeView.Nodes.Add(info.VolumeLabel + $" ({calculateLastTime(lastMdTime)})");
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("最后修改: " + lastMdTime.ToString("yyyy-MM-dd HH:mm"));
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("插入次数: " + info.PlugInTimes);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("白名单: " + info.Excluded);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("总文件数: " + info.FileCount);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("已复制文件数: " + info.CopiedFileCount);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("保存路径: " + info.SavePath);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("设备PNP: " + info.PnpDeviceId);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("文件树");
-                    foreach (string x in info.FileTreeVersions)
-                    {
-                        usbInfo_TreeView.Nodes[i].Nodes[7].Nodes.Add(x[..^2] + ":" + x[^2..]);
-                    }
-                }
-                usbInfo_TreeView.EndUpdate();
-            }
-            catch (Exception ex)
-            {
-                usbInfo_TreeView.EndUpdate();
-                logger.LogE($"刷新USB信息时出现了错误：\n{ex.Message}");
-            }
-        }
 
         private void refreshFileTreeView(RFileNodeL node)
         {
@@ -450,43 +461,56 @@ namespace WBAssistantF
             p.Start();
         }
 
-        private string calculateLastTime(DateTime dateTime)
+        private string timeSpan2String(TimeSpan interval)
         {
-            TimeSpan interval = DateTime.Now - dateTime;
             if (interval.TotalDays > 365)
             {
                 int year = (int)interval.TotalDays / 365;
                 int month = (int)interval.TotalDays % 365 / 31;
-                return $"{year}年{month}月前";
+                return $"{year}年{month}月";
             }
             if (interval.TotalDays > 31)
             {
                 int month = (int)interval.TotalDays / 31;
                 int day = (int)interval.TotalDays % 31;
-                return $"{month}月{day}天前";
+                return $"{month}月{day}天";
             }
             if (interval.TotalHours > 23)
             {
                 int day = (int)interval.TotalHours / 24;
                 int hour = (int)interval.TotalHours % 24;
-                return $"{day}天{hour}小时前";
+                return $"{day}天{hour}小时";
             }
             if (interval.TotalMinutes > 59)
             {
                 int hour = (int)interval.TotalMinutes / 59;
                 int min = (int)interval.TotalMinutes % 59;
-                return $"{hour}小时{min}分钟前";
+                return $"{hour}小时{min}分钟";
             }
             if (interval.TotalSeconds > 59)
             {
                 int min = (int)interval.TotalSeconds / 59;
-                return $"{min}分钟前";
+                int sec = (int)interval.TotalSeconds % 59;
+                return $"{min}分钟{sec}秒";
             }
-            return $"{interval.TotalSeconds}秒前";
+            return $"{interval.TotalSeconds}秒";
+        }
+
+        private string calculateLastTime(DateTime dateTime)
+        {
+            TimeSpan interval = DateTime.Now - dateTime;
+            return timeSpan2String(interval) + "前";
         }
         #endregion
 
         #region Config
+
+        private void autoArrange_checkBox_CheckedChanged(object sender, EventArgs e)
+        {
+            cfg.EnableDesktopArrange = autoArrange_checkBox.Checked;
+            if (cfg.EnableDesktopArrange) { desktopArrange.Start(); } else { desktopArrange.Stop(); }
+            cfg.SaveConfig();
+        }
 
         private void reject_new_device_checkBox_CheckedChanged(object sender, EventArgs e)
         {
@@ -563,5 +587,31 @@ namespace WBAssistantF
             cfg.SaveConfig();
         }
         #endregion
+
+        private async void listView1_DragDrop(object sender, DragEventArgs e)
+        {
+            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (files.Length < 1) return;
+            string filePath = files[0];
+            try
+            {
+                string fileName = Path.GetFileName(filePath);
+                IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(filePath);
+                string duration = timeSpan2String(mediaInfo.Duration);
+            }
+            catch (Exception ex)
+            {
+                logger.LogE("拖拽文件时出现错误：\n" + ex.Message);
+            }
+
+        }
+
+
+        private void listView1_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+        }
+
+
     }
 }
