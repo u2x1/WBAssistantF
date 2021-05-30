@@ -44,6 +44,7 @@ namespace WBAssistantF
                 context.LogTextBox.ScrollToCaret();
             }));
         }
+
         public void LogE(string str)
         {
             context.Invoke(new Action(() =>
@@ -56,7 +57,7 @@ namespace WBAssistantF
 
         public void WriteE(string str)
         {
-            File.AppendAllText("WBAData\\log\\error.log", "[" + DateTime.Now.Date.ToString() + "]" + str + "\r\n");
+            File.AppendAllText("WBAData\\log\\error.log", "[" + DateTime.Now.Date + "]" + str + "\r\n");
         }
 
         public void LogTrigger(string str)
@@ -70,6 +71,7 @@ namespace WBAssistantF
             File.AppendAllText("WBAData\\log\\info.log", "[" + DateTime.Now.ToString("") + "] [Trig] " + str + "\r\n");
         }
     }
+
     public static class Extensions
     {
         public static void AppendText(this RichTextBox box, string text, Color color)

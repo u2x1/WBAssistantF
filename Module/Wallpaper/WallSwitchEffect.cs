@@ -1,113 +1,108 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using WallEffect;
+using WPFWindow;
 
 namespace WBAssistantF.Module.Wallpaper
 {
     internal class WallSwitchEffect
     {
-        public static BitmapSource ToBitmapSource(Bitmap btmap)
-        {
-            return Imaging.CreateBitmapSourceFromHBitmap(btmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-        }
-
-        private readonly WallEffect.MainWindow window;
+        private readonly MainWindow _window;
 
         public WallSwitchEffect()
         {
-            window = new WallEffect.MainWindow
+            _window = new MainWindow
             {
                 Left = -9999,
                 Top = -9999,
                 Width = 0,
                 Height = 0
             };
-            setBackground();
+            SetBackground();
 
-            IntPtr progman = W32.FindWindow("Progman", null);
+            var progman = W32.FindWindow("Progman", null);
 
             // Send 0x052C to Progman. This message directs Progman to spawn a 
             // WorkerW behind the desktop icons. If it is already there, nothing 
             // happens.
             W32.SendMessageTimeout(progman,
-                                   0x052C,
-                                   new IntPtr(0),
-                                   IntPtr.Zero,
-                                   W32.SendMessageTimeoutFlags.SMTO_NORMAL,
-                                   1000,
-                                   out IntPtr _);
+                0x052C,
+                new IntPtr(0),
+                IntPtr.Zero,
+                W32.SendMessageTimeoutFlags.SMTO_NORMAL,
+                1000,
+                out var _);
 
-            IntPtr workerw = IntPtr.Zero;
+            var workerw = IntPtr.Zero;
 
             // We enumerate all Windows, until we find one, that has the SHELLDLL_DefView 
             // as a child. 
             // If we found that window, we take its next sibling and assign it to workerw.
-            W32.EnumWindows(new W32.EnumWindowsProc((tophandle, topparamhandle) =>
+            W32.EnumWindows((tophandle, topparamhandle) =>
             {
-                IntPtr p = W32.FindWindowEx(tophandle,
-                                            IntPtr.Zero,
-                                            "SHELLDLL_DefView",
-                                            IntPtr.Zero);
+                var p = W32.FindWindowEx(tophandle,
+                    IntPtr.Zero,
+                    "SHELLDLL_DefView",
+                    IntPtr.Zero);
 
                 if (p != IntPtr.Zero)
-                {
                     // Gets the WorkerW Window after the current one.
                     workerw = W32.FindWindowEx(IntPtr.Zero,
-                                               tophandle,
-                                               "WorkerW",
-                                               IntPtr.Zero);
-                }
+                        tophandle,
+                        "WorkerW",
+                        IntPtr.Zero);
 
                 return true;
-            }), IntPtr.Zero);
+            }, IntPtr.Zero);
 
-            window.Loaded += new RoutedEventHandler((s, e) =>
-            {
-                W32.SetParent(new WindowInteropHelper(window).Handle, workerw);
-            });
+            _window.Loaded += (s, e) => { W32.SetParent(new WindowInteropHelper(_window).Handle, workerw); };
 
             //// Start the Application Loop for the Form.
-            window.Show();
+            _window.Show();
         }
 
-        public void setBackground()
+        private static BitmapSource ToBitmapSource(Bitmap btmap)
+        {
+            return Imaging.CreateBitmapSourceFromHBitmap(btmap.GetHbitmap(), IntPtr.Zero, Int32Rect.Empty,
+                BitmapSizeOptions.FromEmptyOptions());
+        }
+
+        public void SetBackground()
         {
             try
             {
                 Bitmap bm;
-                using (var fs = new System.IO.FileStream("WBAData\\wall.bmp", System.IO.FileMode.Open))
+                using (var fs = new FileStream("WBAData\\wall.bmp", FileMode.Open))
                 {
                     var bmp = new Bitmap(fs);
-                    bm = (Bitmap)bmp.Clone();
+                    bm = (Bitmap) bmp.Clone();
                 }
-                window.Background = new ImageBrush(ToBitmapSource(bm)) { Stretch = Stretch.Uniform };
+
+                _window.Background = new ImageBrush(ToBitmapSource(bm)) {Stretch = Stretch.Uniform};
             }
-            catch (Exception) { return; }
-
+            catch (Exception)
+            {
+            }
         }
 
-        public void inEffect(Action action)
+        public void InEffect(Action action)
         {
+            _window.Height = SystemParameters.PrimaryScreenHeight + 14;
+            _window.Width = SystemParameters.PrimaryScreenWidth + 14;
+            _window.Left = -7;
+            _window.Top = -7;
 
-            window.Height = SystemParameters.PrimaryScreenHeight + 14;
-            window.Width = SystemParameters.PrimaryScreenWidth + 14;
-            window.Left = -7;
-            window.Top = -7;
-
-            window.InAnimation(action);
+            _window.InAnimation(action);
         }
 
-        public void outEffect()
+        public void OutEffect()
         {
-            window.OutAnimation();
-        }
-
-        public void release()
-        {
-            window.Close();
+            _window.OutAnimation();
         }
     }
 }

@@ -1,38 +1,38 @@
 ﻿using System;
 using System.IO;
 
-namespace WBAssistantF
+namespace WBAssistantF.Util
 {
     internal class Config
     {
-        private Logger logger;
-        public string SavePath = Environment.CurrentDirectory + "\\save";
-        public string[] Extension = new string[] { "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf", "txt" };
-        public bool RefreshWallpaper = false;
+        private Logger _logger;
         public bool AutoOpenExplorer = true;
-        public bool AutoPlay_FTP = false;
-        public bool AutoPlay_EnAudio = false;
-        public string AutoPlay_EnAudio_Unit = "1";
-        public string AutoPlay_EnAudio_FileName = "words and expressions";
+        public bool AutoPlayEnAudio;
+        public string AutoPlayEnAudioFileName = "words and expressions";
+        public string AutoPlayEnAudioUnit = "1";
+        public bool AutoPlayFtp;
+        public bool EnableDesktopArrange;
+        public string[] Extension = {"doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf", "txt"};
+        public bool RefreshWallpaper;
         public bool RejectNewDevice = true;
-        public bool EnableDesktopArrange = false;
+        public string SavePath = Environment.CurrentDirectory + "\\save";
 
         public static Config ParseConfig(string path, Logger logger)
         {
             try
             {
-                string[] cfg = File.ReadAllText(path).Split('\n');
+                var cfg = File.ReadAllText(path).Split('\n');
                 return new Config
                 {
-                    logger = logger,
+                    _logger = logger,
                     SavePath = cfg[0],
                     Extension = cfg[1].Split(','),
                     RefreshWallpaper = bool.Parse(cfg[2]),
                     AutoOpenExplorer = bool.Parse(cfg[3]),
-                    AutoPlay_FTP = bool.Parse(cfg[4]),
-                    AutoPlay_EnAudio = bool.Parse(cfg[5]),
-                    AutoPlay_EnAudio_Unit = cfg[6],
-                    AutoPlay_EnAudio_FileName = cfg[7],
+                    AutoPlayFtp = bool.Parse(cfg[4]),
+                    AutoPlayEnAudio = bool.Parse(cfg[5]),
+                    AutoPlayEnAudioUnit = cfg[6],
+                    AutoPlayEnAudioFileName = cfg[7],
                     RejectNewDevice = bool.Parse(cfg[8]),
                     EnableDesktopArrange = bool.Parse(cfg[9])
                 };
@@ -42,7 +42,7 @@ namespace WBAssistantF
                 logger.LogE("解析配置文件时出错:\n" + e.Message);
                 return new Config
                 {
-                    logger = logger
+                    _logger = logger
                 };
             }
         }
@@ -53,21 +53,21 @@ namespace WBAssistantF
             SaveConfig(path);
         }
 
-        public void SaveConfig(string path)
+        private void SaveConfig(string path)
         {
-            string content = Utils.Intersperse(new string[]
-                {
-                    SavePath,
-                    Utils.Intersperse(Extension, ','),
-                    RefreshWallpaper.ToString(),
-                    AutoOpenExplorer.ToString(),
-                    AutoPlay_FTP.ToString(),
-                    AutoPlay_EnAudio.ToString(),
-                    AutoPlay_EnAudio_Unit,
-                    AutoPlay_EnAudio_FileName,
-                    RejectNewDevice.ToString(),
-                    EnableDesktopArrange.ToString(),
-                }, '\n');
+            var content = Utils.Intersperse(new[]
+            {
+                SavePath,
+                Utils.Intersperse(Extension, ','),
+                RefreshWallpaper.ToString(),
+                AutoOpenExplorer.ToString(),
+                AutoPlayFtp.ToString(),
+                AutoPlayEnAudio.ToString(),
+                AutoPlayEnAudioUnit,
+                AutoPlayEnAudioFileName,
+                RejectNewDevice.ToString(),
+                EnableDesktopArrange.ToString()
+            }, '\n');
 
             try
             {
@@ -75,9 +75,8 @@ namespace WBAssistantF
             }
             catch (Exception e)
             {
-                logger.LogE("保存配置文件时出错:\n" + e.Message);
+                _logger.LogE("保存配置文件时出错:\n" + e.Message);
             }
-
         }
     }
 }

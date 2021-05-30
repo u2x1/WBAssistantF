@@ -53,4 +53,10 @@
     <Resource Include="icon\tray.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+
 </Project>

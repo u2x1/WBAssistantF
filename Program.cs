@@ -6,7 +6,7 @@ namespace WBAssistantF
     internal static class Program
     {
         /// <summary>
-        ///  The main entry point for the application.
+        ///     The main entry point for the application.
         /// </summary>
         [STAThread]
         private static void Main()
@@ -14,7 +14,7 @@ namespace WBAssistantF
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            MainForm form1 = new MainForm();
+            var form1 = new MainForm();
             Application.Run(form1);
         }
     }

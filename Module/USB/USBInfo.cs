@@ -18,9 +18,9 @@ namespace WBAssistantF.Module.USB
         public string[] FileTreeVersions;
         public string Remark;
 
-        public static UsbInfo[] ReadBasicInfos(string path)
+        public static IEnumerable<UsbInfo> ReadBasicInfos(string path)
         {
-            string raw = "";
+            var raw = "";
             try
             {
                 raw = File.ReadAllText(path).Trim();
@@ -30,13 +30,10 @@ namespace WBAssistantF.Module.USB
                 // ignored
             }
 
-            if (raw == "")
-            {
-                return Array.Empty<UsbInfo>();
-            }
+            if (raw == "") return Array.Empty<UsbInfo>();
 
-            string[][] infoStr = Utils.FMap(raw.Split('\n'), (x) => x.Split('|'));
-            return Utils.FMap(infoStr, (x) => new UsbInfo
+            var infoStr = Utils.FMap(raw.Split('\n'), x => x.Split('|'));
+            return Utils.FMap(infoStr, x => new UsbInfo
             {
                 PnpDeviceId = x[0],
                 VolumeLabel = x[1],
@@ -53,8 +50,9 @@ namespace WBAssistantF.Module.USB
 
         public static void SaveBasicInfos(UsbInfo[] infos)
         {
-            string path = "WBAData\\UsbInfos.txt";
-            string infoStr = Utils.Concat(Utils.FMap(infos, (x) => Utils.Intersperse(new string[] {
+            var path = "WBAData\\UsbInfos.txt";
+            var infoStr = Utils.Concat(Utils.FMap(infos, x => Utils.Intersperse(new[]
+            {
                 x.PnpDeviceId,
                 x.VolumeLabel,
                 x.PlugInTimes.ToString(),
@@ -72,37 +70,37 @@ namespace WBAssistantF.Module.USB
 
     internal class WFileNode
     {
-        public WFileNode[] ChildNodes;
         public string[] ChildLeafs;
+        public WFileNode[] ChildNodes;
         public string Name;
 
         public static string GenFileTree(WFileNode root)
         {
-            string files = Utils.Concat(Utils.FMap(root.ChildLeafs, (a) => a + "|"));
-            string dirs = Utils.Concat(Utils.FMap(root.ChildNodes, GenFileTreeChilds));
+            var files = Utils.Concat(Utils.FMap(root.ChildLeafs, a => a + "|"));
+            var dirs = Utils.Concat(Utils.FMap(root.ChildNodes, GenFileTreeChilds));
             return files + dirs + "}";
         }
 
         private static string GenFileTreeChilds(WFileNode root)
         {
-            string files = Utils.Concat(Utils.FMap(root.ChildLeafs, (a) => a + "|"));
-            string dirs = Utils.Concat(Utils.FMap(root.ChildNodes, GenFileTreeChilds));
+            var files = Utils.Concat(Utils.FMap(root.ChildLeafs, a => a + "|"));
+            var dirs = Utils.Concat(Utils.FMap(root.ChildNodes, GenFileTreeChilds));
             return "*" + root.Name + "|" + (files.Length + dirs.Length) + "{" + files + dirs + "}";
         }
     }
 
     /// <summary>
-    /// Lazy Read File Tree
+    ///     Lazy Read File Tree
     /// </summary>
     internal class RFileNodeL
     {
-        public RFileNodeL[] ChildNodes;
+        private bool _childReady;
+
+        private ulong _offset;
         public string[] ChildLeafs;
+        public RFileNodeL[] ChildNodes;
         public string Name;
         public string RawData;
-
-        private ulong _offset = 0;
-        private bool _childReady = false;
 
         public RFileNodeL(string raw)
         {
@@ -117,34 +115,30 @@ namespace WBAssistantF.Module.USB
             var files = new List<string>();
             fixed (char* pString = RawData)
             {
-                char* pChar = pString + _offset;
+                var pChar = pString + _offset;
 
-                // offset for reference of childs
-                ulong offset = _offset;
+                // offset for reference of children
+                var offset = _offset;
                 while (*pChar != '\0')
                 {
-                    if (*pChar == '}')
-                    {
-                        break;
-                    }
+                    if (*pChar == '}') break;
 
                     // directory names begin with *
                     if (*pChar == '*')
                     {
                         ++pChar;
                         ++offset;
-                        string dirName = GetUntil(ref pChar, ref offset, '|');
-                        ulong dirSize = ulong.Parse(GetUntil(ref pChar, ref offset, '{'));
-                        dirs.Add(new RFileNodeL(RawData) { Name = dirName, _offset = offset });
+                        var dirName = GetUntil(ref pChar, ref offset, '|');
+                        var dirSize = ulong.Parse(GetUntil(ref pChar, ref offset, '{'));
+                        dirs.Add(new RFileNodeL(RawData) {Name = dirName, _offset = offset});
                         pChar += dirSize + 1;
                         offset += dirSize + 1;
                     }
                     else
-                    {
                         files.Add(GetUntil(ref pChar, ref offset, '|'));
-                    }
                 }
             }
+
             ChildNodes = dirs.ToArray();
             ChildLeafs = files.ToArray();
             _childReady = true;
@@ -154,8 +148,7 @@ namespace WBAssistantF.Module.USB
         {
             if (depth == null)
                 return;
-            else
-                ChildNodes[depth[0]] = GetModifiedRNode(ChildNodes[depth[0]], depth[1..], node);
+            ChildNodes[depth[0]] = GetModifiedRNode(ChildNodes[depth[0]], depth[1..], node);
         }
 
         private RFileNodeL GetModifiedRNode(RFileNodeL root, int[] depth, RFileNodeL node)
@@ -169,7 +162,7 @@ namespace WBAssistantF.Module.USB
 
         private static unsafe string GetUntil(ref char* pChar, ref ulong offset, char ch)
         {
-            string str = "";
+            var str = "";
             while (true)
             {
                 str += *pChar;
@@ -181,64 +174,52 @@ namespace WBAssistantF.Module.USB
                     ++offset;
                     break;
                 }
-
             }
+
             return str;
         }
     }
 
     /// <summary>
-    /// Strict Read File Tree
+    ///     Strict Read File Tree
     /// </summary>
     internal class RFileNode
     {
+        public string[] ChildLeaves;
         public RFileNode[] ChildNodes;
-        public string[] ChildLeafs;
         public string Name;
 
         public RFileNode Search(string text)
         {
-            if (ChildLeafs == null && ChildNodes == null) { return null; }
-            List<string> rstLeafs = new List<string>();
-            if (ChildLeafs != null)
-            {
-                foreach (var leaf in ChildLeafs)
-                {
-                    if (leaf.IndexOf(text) != -1)
-                    {
-                        rstLeafs.Add(leaf);
-                    }
-                }
-            }
-            List<RFileNode> rstChilds = new List<RFileNode>();
+            if (ChildLeaves == null && ChildNodes == null) return null;
+            var rstLeaves = new List<string>();
+            if (ChildLeaves != null)
+                foreach (var leaf in ChildLeaves)
+                    if (leaf.IndexOf(text, StringComparison.Ordinal) != -1)
+                        rstLeaves.Add(leaf);
+            var rstChildren = new List<RFileNode>();
             if (ChildNodes != null)
-            {
-                foreach (var child in ChildNodes)
-                {
-                    RFileNode c = child.Search(text);
-                    if (c.ChildLeafs.Length == 0 && c.ChildNodes.Length == 0) { continue; }
-                    rstChilds.Add(c);
-
-                }
-            }
-            return new RFileNode() { Name = Name, ChildLeafs = rstLeafs.ToArray(), ChildNodes = rstChilds.ToArray() };
+                rstChildren.AddRange(ChildNodes.Select(child => child.Search(text))
+                    .Where(c => c.ChildLeaves.Length != 0 || c.ChildNodes.Length != 0));
+            return new RFileNode {Name = Name, ChildLeaves = rstLeaves.ToArray(), ChildNodes = rstChildren.ToArray()};
         }
 
         public static RFileNode FromLazy(RFileNodeL lazyNode)
         {
-            RFileNode ret = new RFileNode
+            var ret = new RFileNode
             {
-                ChildLeafs = lazyNode.ChildLeafs,
+                ChildLeaves = lazyNode.ChildLeafs,
                 Name = lazyNode.Name
             };
-            List<RFileNode> childs = new List<RFileNode>();
+            var children = new List<RFileNode>();
             lazyNode.EvaluateRNode();
-            foreach (RFileNodeL lazyChild in lazyNode.ChildNodes)
+            foreach (var lazyChild in lazyNode.ChildNodes)
             {
                 lazyChild.EvaluateRNode();
-                childs.Add(FromLazy(lazyChild));
+                children.Add(FromLazy(lazyChild));
             }
-            ret.ChildNodes = childs.ToArray();
+
+            ret.ChildNodes = children.ToArray();
             return ret;
         }
     }

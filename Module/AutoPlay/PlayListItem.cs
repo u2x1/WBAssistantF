@@ -1,16 +1,19 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace WBAssistantF.Module.AutoPlay
 {
+    [Serializable]
     public class PlayListItem
     {
-        string filePath;
-        PlayTime[] playTime;
+        public string FilePath;
+
+        public bool ShufflePlay = false;
+
+        //public MTime[] PlayTIme = new MTime { };
+        public bool StartFromLastPlayTime = true;
     }
 
-    enum PlayTime
+    public enum MTime
     {
         One = 820,
         Two = 910,

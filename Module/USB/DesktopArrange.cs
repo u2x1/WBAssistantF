@@ -1,16 +1,26 @@
 ﻿using System;
-using System.IO;
-using System.Threading;
-using WPFWindow;
-using System.Windows.Forms;
 using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Windows;
+using System.Windows.Forms;
+using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using WPFWindow;
 
 namespace WBAssistantF.Module.USB
 {
     internal class DesktopArrange
     {
-        Logger _logger;
-        FileSystemWatcher watcher;
+        private readonly Logger _logger;
+
+        private UsbInfo currentInfo;
+        private int insertedCount;
+        private readonly FileSystemWatcher watcher;
 
         public DesktopArrange(Copier copier, Logger logger)
         {
@@ -18,7 +28,6 @@ namespace WBAssistantF.Module.USB
             copier.USBChange += Copier_USBChange;
             watcher = new FileSystemWatcher(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
             watcher.Created += Watcher_Created;
-            Start();
         }
 
         public void Stop()
@@ -31,97 +40,104 @@ namespace WBAssistantF.Module.USB
             watcher.EnableRaisingEvents = true;
         }
 
+        private ImageSource toSource(Icon ico)
+        {
+            return Imaging.CreateBitmapSourceFromHIcon(ico.Handle, Int32Rect.Empty,
+                BitmapSizeOptions.FromEmptyOptions());
+        }
+
         private void Watcher_Created(object sender, FileSystemEventArgs e)
         {
             if (!File.Exists(e.FullPath) && !Directory.Exists(e.FullPath)) return;
-            bool isFile = File.Exists(e.FullPath) ? true : false;
+            var isFile = File.Exists(e.FullPath);
 
-            int retry = 1200;
+            var retry = 1200;
             while (IsFileOrDirLocked(isFile, e.FullPath))
             {
                 Thread.Sleep(500);
                 if (--retry == 0) return;
             }
 
-            string destFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+            var destFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
 
-            if (hasInserted)
-            {
+            if (insertedCount > 0)
                 destFolder += "\\" + currentInfo.Remark;
-            }
             else
-            {
                 destFolder += "\\其他";
-            }
 
-            Thread thread = new Thread(() =>
+            var thread = new Thread(() =>
             {
+                var oriSource = File.Exists(e.FullPath)
+                    ? Icon.ExtractAssociatedIcon(e.FullPath)
+                    : DefaultIcons.FolderLarge;
+                var msgBox = new MovingMsgBox(
+                    e.FullPath,
+                    destFolder,
+                    toSource(oriSource),
+                    toSource(DefaultIcons.FolderLarge)
+                )
+                {
+                    WindowStartupLocation = WindowStartupLocation.Manual
+                };
+                msgBox.Left = Cursor.Position.X - msgBox.Width / 2;
+                msgBox.Top = Cursor.Position.Y - msgBox.Height * 1.5;
+                if (msgBox.Left < 0) msgBox.Left = 0;
+                if (msgBox.Top < 0) msgBox.Top = 0;
+                msgBox.Show();
+                msgBox.ShowMovingAnim();
                 try
                 {
-                    MovingMsgBox msgBox = new MovingMsgBox(e.FullPath, destFolder);
-                    msgBox.Left = Cursor.Position.X - (msgBox.Width / 2);
-                    msgBox.Top = Cursor.Position.Y - (msgBox.Height * 1.5);
-                    msgBox.Show();
-                    msgBox.Activate();
-                    msgBox.ShowMovingAnim();
-                    if (destFolder == e.FullPath) { return; }
-                    if (!Directory.Exists(destFolder))
+                    var thread = new Thread(() =>
                     {
-                        Directory.CreateDirectory(destFolder);
-                    }
-                    if (isFile)
-                    {
-                        File.Move(e.FullPath, destFolder + "\\" + e.Name);
-                    }
-                    else
-                    {
-                        Directory.Move(e.FullPath, destFolder + "\\" + e.Name);
-                    }
-
-                    Thread thread = new Thread(() =>
-                    {
-                        Thread.Sleep(2000);
-                        msgBox.Dispatcher.Invoke(() => { msgBox.Close(); });
-                        foreach (Process pList in Process.GetProcesses())
+                        try
                         {
-                            if (pList.MainWindowTitle.Contains(Path.GetFileName(destFolder)))
-                            { return; }
+                            if (destFolder == e.FullPath) return;
+                            if (!Directory.Exists(destFolder)) Directory.CreateDirectory(destFolder);
+
+                            if (isFile)
+                            {
+                                if (File.Exists(e.FullPath)) File.Delete(destFolder + "\\" + e.Name);
+                                File.Move(e.FullPath, destFolder + "\\" + e.Name);
+                            }
+                            else
+                                Directory.Move(e.FullPath, destFolder + "\\" + e.Name);
                         }
+                        catch (Exception ex)
+                        {
+                            _logger.LogE("移动文件时出现了错误：\n" + ex.Message);
+                        }
+
                         OpenFile(destFolder);
+                        Thread.Sleep(6000);
+                        msgBox.Dispatcher.InvokeShutdown();
                     });
                     thread.SetApartmentState(ApartmentState.STA);
                     thread.Start();
 
-                    System.Windows.Threading.Dispatcher.Run();
+                    Dispatcher.Run();
                 }
                 catch (Exception ex)
                 {
                     _logger.LogE("整理文件时出现了错误：\n" + ex.Message);
-                    // msgBox.ShowErrorAnim();
                 }
-                //msgBox.ShowDoneAnim();
             });
             thread.SetApartmentState(ApartmentState.STA);
             thread.Start();
         }
 
-        private UsbInfo currentInfo;
         /// <summary>
-        /// whether there is inserted usb recorded.
+        ///     whether there is inserted usb recorded.
         /// </summary>
-        private bool hasInserted = false;
-
-        private void Copier_USBChange(bool IsInsert, UsbInfo info)
+        //private bool hasInserted = false;
+        private void Copier_USBChange(bool IsInsert, UsbInfo? info)
         {
-            if (IsInsert && !hasInserted)
+            if (IsInsert)
             {
-                currentInfo = info;
-                hasInserted = true;
+                currentInfo = (UsbInfo) info;
+                ++insertedCount;
             }
             else
-            {
-                hasInserted = false;
-            }
+                --insertedCount;
         }
 
         private bool IsFileOrDirLocked(bool isFile, string path)
@@ -130,7 +146,7 @@ namespace WBAssistantF.Module.USB
             {
                 try
                 {
-                    using FileStream stream = new FileInfo(path).Open(FileMode.Open, FileAccess.Read, FileShare.None);
+                    using var stream = new FileInfo(path).Open(FileMode.Open, FileAccess.Read, FileShare.None);
                     stream.Close();
                 }
                 catch (IOException)
@@ -141,35 +157,75 @@ namespace WBAssistantF.Module.USB
                     //or does not exist (has already been processed)
                     return true;
                 }
+
                 //file is not locked
                 return false;
             }
-            else
-            {
-                foreach (var file in Directory.GetFiles(path))
-                {
-                    if (IsFileOrDirLocked(true, file))
-                        return true;
-                }
-                foreach (var dir in Directory.GetDirectories(path))
-                {
-                    if (IsFileOrDirLocked(false, dir))
-                        return true;
-                }
-                return false;
-            }
+
+            foreach (var file in Directory.GetFiles(path))
+                if (IsFileOrDirLocked(true, file))
+                    return true;
+            foreach (var dir in Directory.GetDirectories(path))
+                if (IsFileOrDirLocked(false, dir))
+                    return true;
+            return false;
         }
 
         private static void OpenFile(string filename)
         {
-            Process p = new Process
+            var p = new Process
             {
                 StartInfo =
                 {
-                    FileName = "cmd.exe", Arguments = $"/c start \"\" \"{filename}\"", CreateNoWindow = true
+                    FileName = "explorer.exe", Arguments = $"\"{filename}\""
                 }
             };
             p.Start();
+        }
+    }
+
+    // get it from https://stackoverflow.com/a/59129804
+    public static class DefaultIcons
+    {
+        private const uint SHSIID_FOLDER = 0x3;
+        private const uint SHGSI_ICON = 0x100;
+        private const uint SHGSI_LARGEICON = 0x0;
+        private const uint SHGSI_SMALLICON = 0x1;
+
+
+        private static Icon folderIcon;
+
+        public static Icon FolderLarge => folderIcon ?? (folderIcon = GetStockIcon(SHSIID_FOLDER, SHGSI_LARGEICON));
+
+        private static Icon GetStockIcon(uint type, uint size)
+        {
+            var info = new SHSTOCKICONINFO();
+            info.cbSize = (uint) Marshal.SizeOf(info);
+
+            SHGetStockIconInfo(type, SHGSI_ICON | size, ref info);
+
+            var icon = (Icon) Icon.FromHandle(info.hIcon).Clone(); // Get a copy that doesn't use the original handle
+            DestroyIcon(info.hIcon); // Clean up native icon to prevent resource leak
+
+            return icon;
+        }
+
+        [DllImport("shell32.dll")]
+        public static extern int SHGetStockIconInfo(uint siid, uint uFlags, ref SHSTOCKICONINFO psii);
+
+        [DllImport("user32.dll")]
+        public static extern bool DestroyIcon(IntPtr handle);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct SHSTOCKICONINFO
+        {
+            public uint cbSize;
+            public IntPtr hIcon;
+            public int iSysIconIndex;
+            public int iIcon;
+
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szPath;
         }
     }
 }
