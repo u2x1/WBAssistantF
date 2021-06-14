@@ -18,12 +18,13 @@ namespace WBAssistantF.Module.USB
         public string[] FileTreeVersions;
         public string Remark;
 
-        public static IEnumerable<UsbInfo> ReadBasicInfos(string path)
+        private const string DataPath = "WBAData\\UsbInfos.txt";
+        public static IEnumerable<UsbInfo> ReadBasicInfos()
         {
             var raw = "";
             try
             {
-                raw = File.ReadAllText(path).Trim();
+                raw = File.ReadAllText(DataPath).Trim();
             }
             catch (Exception)
             {
@@ -50,7 +51,6 @@ namespace WBAssistantF.Module.USB
 
         public static void SaveBasicInfos(UsbInfo[] infos)
         {
-            var path = "WBAData\\UsbInfos.txt";
             var infoStr = Utils.Concat(Utils.FMap(infos, x => Utils.Intersperse(new[]
             {
                 x.PnpDeviceId,
@@ -64,7 +64,7 @@ namespace WBAssistantF.Module.USB
                 x.Excluded.ToString(),
                 x.Remark
             }, '|') + "\n"));
-            File.WriteAllText(path, infoStr);
+            File.WriteAllText(DataPath, infoStr);
         }
     }
 
@@ -204,15 +204,26 @@ namespace WBAssistantF.Module.USB
             return new RFileNode {Name = Name, ChildLeaves = rstLeaves.ToArray(), ChildNodes = rstChildren.ToArray()};
         }
 
+        public string[] GetFullPath()
+        {
+            return Utils.FMap(
+                Utils.Merge(
+                    ChildLeaves,
+                    Utils.Concat(Utils.FMap(ChildNodes, x=>x.GetFullPath()))),
+                x => Name + "\\" + x);
+        }
+
         public static RFileNode FromLazy(RFileNodeL lazyNode)
         {
+            lazyNode.EvaluateRNode();
             var ret = new RFileNode
             {
                 ChildLeaves = lazyNode.ChildLeafs,
                 Name = lazyNode.Name
             };
+            
             var children = new List<RFileNode>();
-            lazyNode.EvaluateRNode();
+            // lazyNode.EvaluateRNode();
             foreach (var lazyChild in lazyNode.ChildNodes)
             {
                 lazyChild.EvaluateRNode();

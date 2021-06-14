@@ -42,6 +42,21 @@ namespace WBAssistantF
                 ret += t;
             return ret;
         }
+        
+        public static string[] Concat(string[][] ts)
+        {
+            List<string> ret = new List<string>();
+            foreach (var t in ts)
+                foreach (var t1 in t)
+                    ret.Add((t1));
+                
+            return ret.ToArray();
+        }
+
+        public static string[] Merge(string[] ts1, string[] ts2)
+        {
+            return ts1.Union(ts2).ToArray();
+        }
 
         public static int Concat(int[] ts)
         {

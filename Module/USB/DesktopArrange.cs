@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Diagnostics;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Forms;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Threading;
-using WPFWindow;
 
 namespace WBAssistantF.Module.USB
 {
@@ -25,9 +23,16 @@ namespace WBAssistantF.Module.USB
         public DesktopArrange(Copier copier, Logger logger)
         {
             _logger = logger;
-            copier.USBChange += Copier_USBChange;
+            copier.UsbChange += Copier_USBChange;
             watcher = new FileSystemWatcher(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
             watcher.Created += Watcher_Created;
+        }
+
+        [STAThread]
+        void sleepAndTidy()
+        {
+            Thread.Sleep(2400000);
+            tidyDesktop();
         }
 
         public void Stop()
@@ -46,17 +51,12 @@ namespace WBAssistantF.Module.USB
                 BitmapSizeOptions.FromEmptyOptions());
         }
 
+        public Dictionary<string, string> scheculedMove = new Dictionary<string, string>();
+
         private void Watcher_Created(object sender, FileSystemEventArgs e)
         {
             if (!File.Exists(e.FullPath) && !Directory.Exists(e.FullPath)) return;
-            var isFile = File.Exists(e.FullPath);
-
-            var retry = 1200;
-            while (IsFileOrDirLocked(isFile, e.FullPath))
-            {
-                Thread.Sleep(500);
-                if (--retry == 0) return;
-            }
+            
 
             var destFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
 
@@ -65,75 +65,76 @@ namespace WBAssistantF.Module.USB
             else
                 destFolder += "\\其他";
 
-            var thread = new Thread(() =>
-            {
-                var oriSource = File.Exists(e.FullPath)
-                    ? Icon.ExtractAssociatedIcon(e.FullPath)
-                    : DefaultIcons.FolderLarge;
-                var msgBox = new MovingMsgBox(
-                    e.FullPath,
-                    destFolder,
-                    toSource(oriSource),
-                    toSource(DefaultIcons.FolderLarge)
-                )
-                {
-                    WindowStartupLocation = WindowStartupLocation.Manual
-                };
-                msgBox.Left = Cursor.Position.X - msgBox.Width / 2;
-                msgBox.Top = Cursor.Position.Y - msgBox.Height * 1.5;
-                if (msgBox.Left < 0) msgBox.Left = 0;
-                if (msgBox.Top < 0) msgBox.Top = 0;
-                msgBox.Show();
-                msgBox.ShowMovingAnim();
-                try
-                {
-                    var thread = new Thread(() =>
-                    {
-                        try
-                        {
-                            if (destFolder == e.FullPath) return;
-                            if (!Directory.Exists(destFolder)) Directory.CreateDirectory(destFolder);
+            if (destFolder == e.FullPath) return;
 
-                            if (isFile)
-                            {
-                                if (File.Exists(e.FullPath)) File.Delete(destFolder + "\\" + e.Name);
-                                File.Move(e.FullPath, destFolder + "\\" + e.Name);
-                            }
-                            else
-                                Directory.Move(e.FullPath, destFolder + "\\" + e.Name);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogE("移动文件时出现了错误：\n" + ex.Message);
-                        }
+            scheculedMove.Add(destFolder, e.FullPath);
+            Task.Factory.StartNew(sleepAndTidy);
 
-                        OpenFile(destFolder);
-                        Thread.Sleep(6000);
-                        msgBox.Dispatcher.InvokeShutdown();
-                    });
-                    thread.SetApartmentState(ApartmentState.STA);
-                    thread.Start();
+            //var thread = new Thread(() =>
+            //{
+            //    var oriSource = File.Exists(e.FullPath)
+            //        ? Icon.ExtractAssociatedIcon(e.FullPath)
+            //        : DefaultIcons.FolderLarge;
+            //    var msgBox = new MovingMsgBox(
+            //        e.FullPath,
+            //        destFolder,
+            //        toSource(oriSource),
+            //        toSource(DefaultIcons.FolderLarge)
+            //    )
+            //    {
+            //        WindowStartupLocation = WindowStartupLocation.Manual
+            //    };
+            //    msgBox.Left = Cursor.Position.X - msgBox.Width / 2;
+            //    msgBox.Top = Cursor.Position.Y - msgBox.Height * 1.5;
+            //    if (msgBox.Left < 0) msgBox.Left = 0;
+            //    if (msgBox.Top < 0) msgBox.Top = 0;
+            //    msgBox.Show();
+            //    msgBox.ShowMovingAnim();
+            //    try
+            //    {
+            //        var thread = new Thread(() =>
+            //        {
+            //            try
+            //            {
+            //                if (destFolder == e.FullPath) return;
+            //                if (!Directory.Exists(destFolder)) Directory.CreateDirectory(destFolder);
 
-                    Dispatcher.Run();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogE("整理文件时出现了错误：\n" + ex.Message);
-                }
-            });
-            thread.SetApartmentState(ApartmentState.STA);
-            thread.Start();
+            //                if (isFile)
+            //                {
+            //                    if (File.Exists(e.FullPath)) File.Delete(destFolder + "\\" + e.Name);
+            //                    File.Move(e.FullPath, destFolder + "\\" + e.Name);
+            //                }
+            //                else
+            //                    Directory.Move(e.FullPath, destFolder + "\\" + e.Name);
+            //            }
+            //            catch (Exception ex)
+            //            {
+            //                _logger.LogE("移动文件时出现了错误：\n" + ex.Message);
+            //            }
+
+            //            OpenFile(destFolder);
+            //            Thread.Sleep(6000);
+            //            msgBox.Dispatcher.InvokeShutdown();
+            //        });
+            //        thread.SetApartmentState(ApartmentState.STA);
+            //        thread.Start();
+
+            //        Dispatcher.Run();
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        _logger.LogE("整理文件时出现了错误：\n" + ex.Message);
+            //    }
+            //});
+            //thread.SetApartmentState(ApartmentState.STA);
+            //thread.Start();
         }
 
-        /// <summary>
-        ///     whether there is inserted usb recorded.
-        /// </summary>
-        //private bool hasInserted = false;
         private void Copier_USBChange(bool IsInsert, UsbInfo? info)
         {
             if (IsInsert)
             {
-                currentInfo = (UsbInfo) info;
+                currentInfo = (UsbInfo)info;
                 ++insertedCount;
             }
             else
@@ -171,16 +172,44 @@ namespace WBAssistantF.Module.USB
             return false;
         }
 
-        private static void OpenFile(string filename)
+        public void tidyDesktop()
         {
-            var p = new Process
+            var thread = new Thread(() =>
             {
-                StartInfo =
+                foreach (var (destFolder, fullPath) in scheculedMove)
                 {
-                    FileName = "explorer.exe", Arguments = $"\"{filename}\""
+                    try
+                    {
+                        var isFile = File.Exists(fullPath);
+
+                        var retry = 1200;
+                        while (IsFileOrDirLocked(isFile, fullPath))
+                        {
+                            Thread.Sleep(500);
+                            if (--retry == 0) return;
+                        }
+
+                        if (destFolder == fullPath) return;
+                        if (!Directory.Exists(destFolder)) Directory.CreateDirectory(destFolder);
+
+                        string filename = Path.GetFileName(fullPath);
+                        if (isFile)
+                        {
+                            if (File.Exists(fullPath)) File.Delete(destFolder + "\\" + filename);
+                            File.Move(fullPath, destFolder + "\\" + filename);
+                        }
+                        else
+                            Directory.Move(fullPath, destFolder + "\\" + filename);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogE("移动文件时出现了错误：\n" + ex.Message);
+                    }
                 }
-            };
-            p.Start();
+                scheculedMove.Clear();
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.Start();
         }
     }
 
@@ -200,11 +229,11 @@ namespace WBAssistantF.Module.USB
         private static Icon GetStockIcon(uint type, uint size)
         {
             var info = new SHSTOCKICONINFO();
-            info.cbSize = (uint) Marshal.SizeOf(info);
+            info.cbSize = (uint)Marshal.SizeOf(info);
 
             SHGetStockIconInfo(type, SHGSI_ICON | size, ref info);
 
-            var icon = (Icon) Icon.FromHandle(info.hIcon).Clone(); // Get a copy that doesn't use the original handle
+            var icon = (Icon)Icon.FromHandle(info.hIcon).Clone(); // Get a copy that doesn't use the original handle
             DestroyIcon(info.hIcon); // Clean up native icon to prevent resource leak
 
             return icon;

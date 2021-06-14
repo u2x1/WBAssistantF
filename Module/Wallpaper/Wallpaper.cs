@@ -37,7 +37,7 @@ namespace WBAssistantF.Module.Wallpaper
         {
             _logger = lgr;
             _copier = copier;
-            _copier.USBChangeWithoutInfo += _copier_USBChangeWithoutInfo;
+            _copier.UsbChangeWithoutInfo += _copier_USBChangeWithoutInfo;
         }
 
         private void _copier_USBChangeWithoutInfo(bool isInsert)

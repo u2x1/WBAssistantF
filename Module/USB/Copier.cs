@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Text;
 using System.Text.RegularExpressions;
 using WBAssistantF.Util;
 
@@ -11,25 +12,23 @@ namespace WBAssistantF.Module.USB
 {
     internal class Copier
     {
-        public delegate void USBChangeHandler(bool IsInsert, UsbInfo? info);
-
-        public delegate void USBChangeWithoutInfoHandler(bool isInsert);
+        public delegate void UsbChangeHandler(bool isInsert, UsbInfo? info);
+        public delegate void UsbChangeWithoutInfoHandler(bool isInsert);
 
         private readonly Config _cfg;
-        private readonly List<UsbInfo> _infos;
-
+        public readonly List<UsbInfo> Infos;
+        public UsbInfo? LastInsertedUsbInfo;
         private readonly Logger _logger;
-        //private DesktopArrange desktopArrange;
 
         public Copier(Logger lgr, ref Config config, ref List<UsbInfo> info)
         {
             _logger = lgr;
             _cfg = config;
-            _infos = info;
+            Infos = info;
         }
 
-        public event USBChangeWithoutInfoHandler USBChangeWithoutInfo;
-        public event USBChangeHandler USBChange;
+        public event UsbChangeWithoutInfoHandler UsbChangeWithoutInfo;
+        public event UsbChangeHandler UsbChange;
 
 
         public void StartCopierListen()
@@ -58,9 +57,9 @@ namespace WBAssistantF.Module.USB
 
         private void DeviceRemovedEvent(object sender, EventArrivedEventArgs e)
         {
-            if (!(e.NewEvent.Properties["TargetInstance"].Value is ManagementBaseObject mbo)) return;
-            USBChangeWithoutInfo?.Invoke(false);
-            USBChange?.Invoke(false, null);
+            if (!(e.NewEvent.Properties["TargetInstance"].Value is ManagementBaseObject)) return;
+            UsbChangeWithoutInfo?.Invoke(false);
+            UsbChange?.Invoke(false, null);
         }
 
         private void Watcher_EventArrived(object sender, EventArrivedEventArgs e)
@@ -104,8 +103,7 @@ namespace WBAssistantF.Module.USB
         {
             try
             {
-                var info = _infos[index];
-                USBChange?.Invoke(true, info);
+                var info = Infos[index];
                 if (!Directory.Exists(info.SavePath))
                 {
                     _logger.LogI("正在创建新文件夹：" + info.SavePath);
@@ -202,10 +200,10 @@ namespace WBAssistantF.Module.USB
                 info.CopiedFileCount = files.Count;
                 info.LastModified = DateTimeOffset.Now.ToUnixTimeSeconds();
 
-                _infos[index] = info;
-
-
-                UsbInfo.SaveBasicInfos(_infos.ToArray());
+                Infos[index] = info;
+                LastInsertedUsbInfo = info;
+                UsbInfo.SaveBasicInfos(Infos.ToArray());
+                UsbChange?.Invoke(true, info);
             }
             catch (Exception ex)
             {
@@ -215,7 +213,7 @@ namespace WBAssistantF.Module.USB
 
         private void PrepareDrive(string driveLetter, string pnpDeviceId)
         {
-            USBChangeWithoutInfo?.Invoke(true);
+            UsbChangeWithoutInfo?.Invoke(true);
 
             var drive = new DriveInfo(driveLetter);
             if (drive.IsReady)
@@ -228,7 +226,7 @@ namespace WBAssistantF.Module.USB
                 if (_cfg.RejectNewDevice)
                 {
                     var skip = true;
-                    foreach (var info in _infos)
+                    foreach (var info in Infos)
                         if (info.PnpDeviceId == pnpDeviceId)
                         {
                             skip = false;
@@ -242,10 +240,10 @@ namespace WBAssistantF.Module.USB
                     }
                 }
 
-                for (var i = 0; i < _infos.Count; ++i)
-                    if (_infos[i].PnpDeviceId == pnpDeviceId)
+                for (var i = 0; i < Infos.Count; ++i)
+                    if (Infos[i].PnpDeviceId == pnpDeviceId)
                     {
-                        if (_infos[i].Excluded)
+                        if (Infos[i].Excluded)
                             _logger.LogI("该USB设备在白名单内，跳过");
                         else
                             CopyFiles(i, driveLetter);
@@ -253,7 +251,7 @@ namespace WBAssistantF.Module.USB
                     }
 
                 // if there is no corresponding USBInfo, create one
-                _infos.Add(new UsbInfo
+                Infos.Add(new UsbInfo
                 {
                     PnpDeviceId = pnpDeviceId,
                     VolumeLabel = drive.VolumeLabel,
@@ -264,7 +262,7 @@ namespace WBAssistantF.Module.USB
                     LastModified = DateTimeOffset.Now.ToUnixTimeSeconds(),
                     Remark = "未知"
                 });
-                CopyFiles(_infos.Count - 1, driveLetter);
+                CopyFiles(Infos.Count - 1, driveLetter);
             }
         }
 

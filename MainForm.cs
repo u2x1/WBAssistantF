@@ -10,30 +10,34 @@ using WBAssistantF.Module.AutoPlay;
 using WBAssistantF.Module.USB;
 using WBAssistantF.Module.Wallpaper;
 using WBAssistantF.Util;
-using Xabe.FFmpeg;
 
 namespace WBAssistantF
 {
     public partial class MainForm : Form
     {
-        private const string Version = "2.5.0";
+        private const string Version = "2.6.0";
         private const string AppName = "WBAssistant";
-        private AutoPlay autoPlay;
-        private Config cfg;
-        private Copier copier;
-        private DesktopArrange desktopArrange;
-        private readonly bool exitFlag = false;
-        private RFileNodeL fileNodeL; // file node of currently selected usb
-        private RFileNode fileNodeS; // same as above
-        private List<UsbInfo> infos;
-        private Logger logger;
+        
+        private Config _cfg;
         public RichTextBox LogTextBox;
-        private UsbInfo selectedInfo;
-        private WallpaperMain wallpaper;
+        
+        private RFileNodeL _fileNodeL; // file node of currently selected usb
+        private RFileNode _fileNodeS; // same as above
+        private List<UsbInfo> _infos;
+        private Logger _logger;
+        private UsbInfo _selectedInfo;
+        private List<FileWatcher.RecentFile> _recentFiles;
+        
+        private Copier _copier;
+        private AutoPlay _autoPlay;
+        private DesktopArrange _desktopArrange;
+        private WallpaperMain _wallpaper;
+        private FileWatcher _fileWatcher;
 
         public MainForm()
         {
-            Environment.CurrentDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+            Environment.CurrentDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName) 
+                                             ?? Environment.CurrentDirectory;
             InitializeComponent();
         }
 
@@ -42,16 +46,21 @@ namespace WBAssistantF
             Location = new Point(Screen.PrimaryScreen.WorkingArea.Width - Width,
                 Screen.PrimaryScreen.WorkingArea.Height - Height);
             LogTextBox = logTextBox;
-            logger = new Logger(this);
-            cfg = Config.ParseConfig("WBAData\\config.txt", logger);
-            infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos("WBAData\\UsbInfos.txt"));
-            copier = new Copier(logger, ref cfg, ref infos);
-            autoPlay = new AutoPlay(logger);
-            desktopArrange = new DesktopArrange(copier, logger);
-            wallpaper = new WallpaperMain(logger, copier);
-            if (cfg.EnableDesktopArrange) desktopArrange.Start();
+            _logger = new Logger(this);
+            _cfg = Config.ParseConfig("WBAData\\config.txt", _logger);
+            _infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos());
+            _copier = new Copier(_logger, ref _cfg, ref _infos);
+            _autoPlay = new AutoPlay(_logger);
+            _desktopArrange = new DesktopArrange(_copier, _logger);
+            _wallpaper = new WallpaperMain(_logger, _copier);
+            _recentFiles = new List<FileWatcher.RecentFile>(FileWatcher.RecentFile.ReadRecentFiles());
+            _fileWatcher = new FileWatcher(_copier, _recentFiles);
+            _fileWatcher.RecentFileAdded += FileWatcherOnRecentFileAdded;
 
-            logger.LogC($"版本 {Version}, 由 Nutr1t07 (Nelson Xiao) 制作");
+            if (_cfg.EnableDesktopArrange) _desktopArrange.Start();
+            
+
+            _logger.LogC($"版本 {Version}, 由 Nutr1t07 (Nelson Xiao) 制作");
 
             if (!Directory.Exists("WBAData"))
             {
@@ -59,62 +68,89 @@ namespace WBAssistantF
                 Directory.CreateDirectory("WBAData\\log");
             }
 
-            if (cfg.RefreshWallpaper) Task.Factory.StartNew(() => wallpaper.PickWallIfTimePermit());
-            if (cfg.AutoPlayFtp) Task.Factory.StartNew(() => new AutoPlay(logger).CheckFtp(this));
-            if (cfg.AutoPlayEnAudio)
+            if (_cfg.RefreshWallpaper) Task.Factory.StartNew(() => _wallpaper.PickWallIfTimePermit());
+            if (_cfg.AutoPlayFtp) Task.Factory.StartNew(() => new AutoPlay(_logger).CheckFtp(this));
+            if (_cfg.AutoPlayEnAudio)
                 Task.Factory.StartNew(() =>
-                    new AutoPlay(logger).checkEnglishAudio(cfg.AutoPlayEnAudioUnit, cfg.AutoPlayEnAudioFileName));
-            Task.Factory.StartNew(() => copier.StartCopierListen());
+                    new AutoPlay(_logger).checkEnglishAudio(_cfg.AutoPlayEnAudioUnit, _cfg.AutoPlayEnAudioFileName));
+            
+            Task.Factory.StartNew(() => _copier.StartCopierListen());
+            Task.Factory.StartNew(() => _fileWatcher.Listen());
+            
             InitialConfigPage();
             RefreshUsbInfos();
+            InitRecentFileListViewUi();
+
+            _copier.UsbChange += (insert, info) => RefreshUsbInfos();
         }
+
+ 
 
         private void InitialConfigPage()
         {
             var registryKey =
                 Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
-            checkBox1.Checked = registryKey.GetValue(AppName) != null;
-            checkBox2.Checked = cfg.RefreshWallpaper;
-            checkBox3.Checked = cfg.AutoOpenExplorer;
-            checkBox4.Checked = cfg.AutoPlayFtp;
-            checkBox5.Checked = cfg.AutoPlayEnAudio;
-            reject_new_device_checkBox.Checked = cfg.RejectNewDevice;
-            autoArrange_checkBox.Checked = cfg.EnableDesktopArrange;
+            checkBox1.Checked = registryKey?.GetValue(AppName) != null;
+            checkBox2.Checked = _cfg.RefreshWallpaper;
+            checkBox3.Checked = _cfg.AutoOpenExplorer;
+            checkBox4.Checked = _cfg.AutoPlayFtp;
+            checkBox5.Checked = _cfg.AutoPlayEnAudio;
+            reject_new_device_checkBox.Checked = _cfg.RejectNewDevice;
+            autoArrange_checkBox.Checked = _cfg.EnableDesktopArrange;
 
-            extension_textBox.Text = Utils.Intersperse(cfg.Extension, ',');
-            savePath_textBox.Text = cfg.SavePath;
-            enUnit_textBox.Text = cfg.AutoPlayEnAudioUnit;
-            enFileName_textBox.Text = cfg.AutoPlayEnAudioFileName;
+            extension_textBox.Text = Utils.Intersperse(_cfg.Extension, ',');
+            savePath_textBox.Text = _cfg.SavePath;
+            enUnit_textBox.Text = _cfg.AutoPlayEnAudioUnit;
+            enFileName_textBox.Text = _cfg.AutoPlayEnAudioFileName;
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (exitFlag) return;
             e.Cancel = true;
             Hide();
         }
 
-        private async void listView1_DragDrop(object sender, DragEventArgs e)
+        #region RecentFile UI logic
+        
+        private void recentFile_listView_DoubleClick(object sender, EventArgs e)
         {
-            var files = (string[]) e.Data.GetData(DataFormats.FileDrop);
-            if (files.Length < 1) return;
-            var filePath = files[0];
-            try
+            string filepath = recentFile_listView.FocusedItem.SubItems[2].Text
+                .Replace("\\\\","\\");
+            if(filepath != "未知")
+                OpenFile(filepath);
+            else
+                MessageBox.Show("文件路径未知，无法打开。");
+            
+        }
+        
+        private void FileWatcherOnRecentFileAdded(FileWatcher.RecentFile recentfile)
+        {
+            recentFile_listView.BeginUpdate();
+            recentFile_listView.Items.Add(new ListViewItem(new[]
             {
-                var fileName = Path.GetFileName(filePath);
-                var mediaInfo = await FFmpeg.GetMediaInfo(filePath);
-                var duration = timeSpan2String(mediaInfo.Duration);
-            }
-            catch (Exception ex)
-            {
-                logger.LogE("拖拽文件时出现错误：\n" + ex.Message);
-            }
+                recentfile.FileName,
+                DateTimeOffset.FromUnixTimeSeconds(recentfile.OpenTime).LocalDateTime.ToString("MM-dd HH:mm"),
+                recentfile.FilePath
+            }));
+            recentFile_listView.EndUpdate();
         }
 
-        private void listView1_DragEnter(object sender, DragEventArgs e)
+        private void InitRecentFileListViewUi()
         {
-            if (e.Data.GetDataPresent(DataFormats.FileDrop)) e.Effect = DragDropEffects.Copy;
+            recentFile_listView.BeginUpdate();
+            foreach (var recentFile in _recentFiles)
+            {
+                recentFile_listView.Items.Add(new ListViewItem(new[]
+                {
+                    recentFile.FileName,
+                    DateTimeOffset.FromUnixTimeSeconds(recentFile.OpenTime).LocalDateTime.ToString("MM-dd HH:mm"),
+                    recentFile.FilePath
+                }));    
+            }
+            recentFile_listView.EndUpdate();
         }
+
+        #endregion
 
         #region USBInfo UI logic
 
@@ -125,16 +161,16 @@ namespace WBAssistantF
         {
             try
             {
-                infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos("WBAData\\UsbInfos.txt"));
+                _infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos());
                 usbInfo_TreeView.BeginUpdate();
                 usbInfo_TreeView.Nodes.Clear();
 
-                for (var i = 0; i < infos.Count; ++i)
+                for (var i = 0; i < _infos.Count; ++i)
                 {
-                    var info = infos[i];
+                    var info = _infos[i];
                     var lastMdTime = DateTimeOffset.FromUnixTimeSeconds(info.LastModified).LocalDateTime;
 
-                    usbInfo_TreeView.Nodes.Add($"{info.Remark} ({info.VolumeLabel}) ({calculateLastTime(lastMdTime)})");
+                    usbInfo_TreeView.Nodes.Add($"{info.Remark} ({info.VolumeLabel}) ({CalculateLastTime(lastMdTime)})");
                     usbInfo_TreeView.Nodes[i].Nodes.Add("最后修改: " + lastMdTime.ToString("yyyy-MM-dd HH:mm"));
                     usbInfo_TreeView.Nodes[i].Nodes.Add("插入次数: " + info.PlugInTimes);
                     usbInfo_TreeView.Nodes[i].Nodes.Add("白名单: " + info.Excluded);
@@ -152,26 +188,26 @@ namespace WBAssistantF
             catch (Exception ex)
             {
                 usbInfo_TreeView.EndUpdate();
-                logger.LogE($"刷新USB信息时出现了错误：\n{ex.Message}");
+                _logger.LogE($"刷新USB信息时出现了错误：\n{ex.Message}");
             }
         }
 
         private void usbInfo_TreeView_DoubleClick(object sender, EventArgs e)
         {
-            fileNodeL = null;
-            fileNodeS = null;
+            _fileNodeL = null;
+            _fileNodeS = null;
             no_result_label.Visible = false;
             var node = usbInfo_TreeView.SelectedNode;
 
             string pnp, ver;
 
-            if (node != null && node.Parent == null && node.Nodes != null)
+            if (node is {Parent: null})     //  double clicked on an usb name 
             {
                 pnp = node.Nodes[6].Text[7..];
                 var verstr = node.Nodes[7].Nodes[0].Text;
                 ver = verstr[..^3] + verstr[^2..];
             }
-            else if (node != null && node.Parent != null && node.Parent.Text == "文件树")
+            else if (node is {Parent: {Text: "文件树"}})  // double click on an filetree versiop 
             {
                 ver = node.Text[..^3] + node.Text[^2..];
                 pnp = node.Parent.Parent.Nodes[6].Text[7..];
@@ -179,24 +215,24 @@ namespace WBAssistantF
             else
                 return;
 
-            var index = Utils.FirstWhich(infos.ToArray(), a => a.PnpDeviceId == pnp);
+            var index = Utils.FirstWhich(_infos.ToArray(), a => a.PnpDeviceId == pnp);
             if (index == -1)
                 return;
 
             tabControl.SelectedTab = fileTree_tabPage;
             jump_to_usbinfo_label.Visible = false;
 
-            selectedInfo = infos[index];
+            _selectedInfo = _infos[index];
 
-            volumeName_label.Text = selectedInfo.VolumeLabel;
+            volumeName_label.Text = _selectedInfo.VolumeLabel;
             fileCount_label.Text =
-                $"文件数: ({selectedInfo.CopiedFileCount}/{selectedInfo.FileCount})";
+                $"文件数: ({_selectedInfo.CopiedFileCount}/{_selectedInfo.FileCount})";
             lastModified_label.Text = node.Text;
             string fileTreeRaw;
             try
             {
                 fileTreeRaw = File.ReadAllText(
-                    selectedInfo.SavePath + "\\diskInfos\\FileTree " + ver + ".txt");
+                    _selectedInfo.SavePath + "\\diskInfos\\FileTree " + ver + ".txt");
             }
             catch (Exception)
             {
@@ -204,10 +240,10 @@ namespace WBAssistantF
                 return;
             }
 
-            fileNodeL = new RFileNodeL(fileTreeRaw);
-            fileNodeL.EvaluateRNode();
+            _fileNodeL = new RFileNodeL(fileTreeRaw);
+            _fileNodeL.EvaluateRNode();
 
-            refreshFileTreeView(fileNodeL);
+            RefreshFileTreeView(_fileNodeL);
         }
 
         private void usbInfo_TreeView_MouseClick(object sender, MouseEventArgs e)
@@ -239,10 +275,10 @@ namespace WBAssistantF
 
             if (item == exclude_usbInfo_menuItem)
             {
-                var a = infos[index];
+                var a = _infos[index];
                 a.Excluded = !a.Excluded;
-                infos[index] = a;
-                UsbInfo.SaveBasicInfos(infos.ToArray());
+                _infos[index] = a;
+                UsbInfo.SaveBasicInfos(_infos.ToArray());
             }
             else if (item == remove_usbInfo_menuItem)
             {
@@ -250,22 +286,22 @@ namespace WBAssistantF
                     MessageBoxIcon.Warning);
                 if (rst == DialogResult.OK)
                 {
-                    infos.RemoveAt(index);
-                    UsbInfo.SaveBasicInfos(infos.ToArray());
+                    _infos.RemoveAt(index);
+                    UsbInfo.SaveBasicInfos(_infos.ToArray());
                 }
                 else return;
             }
             else if (item == removeFileTree_usbInfo_menuItem)
             {
                 var usbIndex = usbInfo_TreeView.SelectedNode.Parent.Parent.Index;
-                var ver = infos[usbIndex].FileTreeVersions[index];
+                var ver = _infos[usbIndex].FileTreeVersions[index];
 
                 var rst = MessageBox.Show("删除文件树 [" + ver + "] ？", "警告", MessageBoxButtons.OKCancel,
                     MessageBoxIcon.Warning);
                 if (rst == DialogResult.OK)
                 {
-                    infos.RemoveAt(index);
-                    UsbInfo.SaveBasicInfos(infos.ToArray());
+                    _infos.RemoveAt(index);
+                    UsbInfo.SaveBasicInfos(_infos.ToArray());
                 }
                 else return;
             }
@@ -277,15 +313,15 @@ namespace WBAssistantF
                 {
                     try
                     {
-                        Directory.Delete(infos[index].SavePath, true);
+                        Directory.Delete(_infos[index].SavePath, true);
                     }
                     catch (Exception ex)
                     {
-                        logger.LogE("在删除文件时出现了错误：\n" + ex.Message);
+                        _logger.LogE("在删除文件时出现了错误：\n" + ex.Message);
                     }
 
-                    infos.RemoveAt(index);
-                    UsbInfo.SaveBasicInfos(infos.ToArray());
+                    _infos.RemoveAt(index);
+                    UsbInfo.SaveBasicInfos(_infos.ToArray());
                 }
                 else return;
             }
@@ -304,7 +340,7 @@ namespace WBAssistantF
             fileTree_treeView.BeginUpdate();
             e.Node.Nodes.Clear();
             List<string> parents = GetParents(e.Node);
-            var rn = fileNodeL;
+            var rn = _fileNodeL;
             var index = new int[parents.Count];
             for (var i = 0; i < parents.Count; ++i)
             {
@@ -319,7 +355,9 @@ namespace WBAssistantF
                 e.Node.Nodes[i].Nodes.Add("|"); //placeholder
             }
 
-            for (var i = 0; i < rn.ChildLeafs.Length; ++i) e.Node.Nodes.Add(rn.ChildLeafs[i]);
+            foreach (var t in rn.ChildLeafs)
+                e.Node.Nodes.Add(t);
+
             if (e.Node.Nodes.Count == 0) e.Node.Nodes.Add("=== 空文件夹 ===");
             fileTree_treeView.EndUpdate();
         }
@@ -335,7 +373,7 @@ namespace WBAssistantF
                 node = node.Parent;
             } while (node != null);
 
-            path = selectedInfo.SavePath + path[..^1];
+            path = _selectedInfo.SavePath + path[..^1];
             if (!File.Exists(path))
             {
                 MessageBox.Show("文件不存在，请检查该类型的文件拓展名是否已被写入配置。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -351,11 +389,11 @@ namespace WBAssistantF
             var text = search_textBox.Text;
             if (text == "")
             {
-                refreshFileTreeView(fileNodeL);
+                RefreshFileTreeView(_fileNodeL);
                 return;
             }
 
-            if (fileNodeL.RawData.IndexOf(text) == -1)
+            if (_fileNodeL.RawData.IndexOf(text) == -1)
             {
                 fileTree_treeView.BeginUpdate();
                 fileTree_treeView.Nodes.Clear();
@@ -364,13 +402,13 @@ namespace WBAssistantF
                 return;
             }
 
-            if (fileNodeS == null) fileNodeS = RFileNode.FromLazy(fileNodeL);
-            refreshFileTreeView(fileNodeS.Search(text));
+            _fileNodeS ??= RFileNode.FromLazy(_fileNodeL);
+            RefreshFileTreeView(_fileNodeS.Search(text));
         }
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Copier.StartExplorer(selectedInfo.SavePath);
+            Copier.StartExplorer(_selectedInfo.SavePath);
         }
 
         #endregion
@@ -400,24 +438,24 @@ namespace WBAssistantF
             if (item == mainWindow_notify_menuItem)
                 Show();
             else if (item == refreshWall_notify_menuItem)
-                wallpaper.PickWall();
+                _wallpaper.PickWall();
             else if (item == exit_toolStripMenuItem)
                 //exitFlag = true;
                 //Close();
                 //Application.Exit();
                 Environment.Exit(0);
             else if (item == playVideo_menuItem)
-                Task.Factory.StartNew(() => autoPlay.CheckFtp(this, true));
+                Task.Factory.StartNew(() => _autoPlay.CheckFtp(this, true));
             else if (item == playAudio_menuItem)
                 Task.Factory.StartNew(() =>
-                    autoPlay.checkEnglishAudio(cfg.AutoPlayEnAudioUnit, cfg.AutoPlayEnAudioFileName, true));
+                    _autoPlay.checkEnglishAudio(_cfg.AutoPlayEnAudioUnit, _cfg.AutoPlayEnAudioFileName, true));
             else if (item == EnglishUnitPlusMenuItem)
             {
-                cfg.AutoPlayEnAudioUnit = cfg.AutoPlayEnAudioUnit[0] >= '8'
+                _cfg.AutoPlayEnAudioUnit = _cfg.AutoPlayEnAudioUnit[0] >= '8'
                     ? "0"
-                    : (cfg.AutoPlayEnAudioUnit[0] - '0' + 1).ToString();
-                cfg.SaveConfig();
-                enUnit_textBox.Text = cfg.AutoPlayEnAudioUnit;
+                    : (_cfg.AutoPlayEnAudioUnit[0] - '0' + 1).ToString();
+                _cfg.SaveConfig();
+                enUnit_textBox.Text = _cfg.AutoPlayEnAudioUnit;
             }
         }
 
@@ -425,7 +463,7 @@ namespace WBAssistantF
 
         #region Helper
 
-        private void refreshFileTreeView(RFileNodeL node)
+        private void RefreshFileTreeView(RFileNodeL node)
         {
             fileTree_treeView.BeginUpdate();
             fileTree_treeView.Nodes.Clear();
@@ -435,11 +473,13 @@ namespace WBAssistantF
                 fileTree_treeView.Nodes[i].Nodes.Add("|");
             }
 
-            for (var i = 0; i < node.ChildLeafs.Length; ++i) fileTree_treeView.Nodes.Add(node.ChildLeafs[i]);
+            foreach (var t in node.ChildLeafs)
+                fileTree_treeView.Nodes.Add(t);
+
             fileTree_treeView.EndUpdate();
         }
 
-        private void refreshFileTreeView(RFileNode node)
+        private void RefreshFileTreeView(RFileNode node)
         {
             fileTree_treeView.BeginUpdate();
             fileTree_treeView.Nodes.Clear();
@@ -461,7 +501,8 @@ namespace WBAssistantF
                 addNodes(treeNodeCollection[i].Nodes, node.ChildNodes[i]);
             }
 
-            for (var i = 0; i < node.ChildLeaves.Length; ++i) treeNodeCollection.Add(node.ChildLeaves[i]);
+            foreach (var t in node.ChildLeaves)
+                treeNodeCollection.Add(t);
         }
 
         /// <summary>
@@ -533,7 +574,7 @@ namespace WBAssistantF
             return $"{interval.TotalSeconds}秒";
         }
 
-        private string calculateLastTime(DateTime dateTime)
+        private string CalculateLastTime(DateTime dateTime)
         {
             var interval = DateTime.Now - dateTime;
             return timeSpan2String(interval) + "前";
@@ -545,30 +586,30 @@ namespace WBAssistantF
 
         private void autoArrange_checkBox_CheckedChanged(object sender, EventArgs e)
         {
-            cfg.EnableDesktopArrange = autoArrange_checkBox.Checked;
-            if (cfg.EnableDesktopArrange)
-                desktopArrange.Start();
+            _cfg.EnableDesktopArrange = autoArrange_checkBox.Checked;
+            if (_cfg.EnableDesktopArrange)
+                _desktopArrange.Start();
             else
-                desktopArrange.Stop();
-            cfg.SaveConfig();
+                _desktopArrange.Stop();
+            _cfg.SaveConfig();
         }
 
         private void reject_new_device_checkBox_CheckedChanged(object sender, EventArgs e)
         {
-            cfg.RejectNewDevice = reject_new_device_checkBox.Checked;
-            cfg.SaveConfig();
+            _cfg.RejectNewDevice = reject_new_device_checkBox.Checked;
+            _cfg.SaveConfig();
         }
 
         private void checkBox2_CheckedChanged(object sender, EventArgs e)
         {
-            cfg.RefreshWallpaper = checkBox2.Checked;
-            cfg.SaveConfig();
+            _cfg.RefreshWallpaper = checkBox2.Checked;
+            _cfg.SaveConfig();
         }
 
         private void checkBox3_CheckedChanged(object sender, EventArgs e)
         {
-            cfg.AutoOpenExplorer = checkBox3.Checked;
-            cfg.SaveConfig();
+            _cfg.AutoOpenExplorer = checkBox3.Checked;
+            _cfg.SaveConfig();
         }
 
         private void checkBox1_CheckedChanged(object sender, EventArgs e)
@@ -583,8 +624,8 @@ namespace WBAssistantF
 
         private void button3_Click(object sender, EventArgs e)
         {
-            cfg.SavePath = savePath_textBox.Text;
-            cfg.SaveConfig();
+            _cfg.SavePath = savePath_textBox.Text;
+            _cfg.SaveConfig();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -592,41 +633,40 @@ namespace WBAssistantF
             try
             {
                 var extensions = extension_textBox.Text.Split(',');
-                cfg.Extension = extensions;
+                _cfg.Extension = extensions;
             }
             catch (Exception)
             {
                 MessageBox.Show("格式错误，请确保各个拓展名间有英文逗号(,)分隔");
             }
 
-            cfg.SaveConfig();
+            _cfg.SaveConfig();
         }
 
         private void saveEnUnitSave_btn_Click(object sender, EventArgs e)
         {
-            cfg.AutoPlayEnAudioUnit = enUnit_textBox.Text;
-            cfg.SaveConfig();
+            _cfg.AutoPlayEnAudioUnit = enUnit_textBox.Text;
+            _cfg.SaveConfig();
         }
 
         private void EnFileNameSave_btn_Click(object sender, EventArgs e)
         {
             var filenames = enFileName_textBox.Text;
-            cfg.AutoPlayEnAudioFileName = filenames;
-            cfg.SaveConfig();
+            _cfg.AutoPlayEnAudioFileName = filenames;
+            _cfg.SaveConfig();
         }
 
         private void checkBox5_CheckedChanged(object sender, EventArgs e)
         {
-            cfg.AutoPlayEnAudio = checkBox5.Checked;
-            cfg.SaveConfig();
+            _cfg.AutoPlayEnAudio = checkBox5.Checked;
+            _cfg.SaveConfig();
         }
 
         private void checkBox4_CheckedChanged(object sender, EventArgs e)
         {
-            cfg.AutoPlayFtp = checkBox4.Checked;
-            cfg.SaveConfig();
+            _cfg.AutoPlayFtp = checkBox4.Checked;
+            _cfg.SaveConfig();
         }
-
         #endregion
     }
 }
