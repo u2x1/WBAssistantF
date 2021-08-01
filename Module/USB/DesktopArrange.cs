@@ -4,7 +4,6 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -19,6 +18,9 @@ namespace WBAssistantF.Module.USB
         private UsbInfo currentInfo;
         private int insertedCount;
         private readonly FileSystemWatcher watcher;
+        //System.Timers.Timer timer = new System.Timers.Timer(2400000);
+
+        System.Timers.Timer timer = new System.Timers.Timer(1400);
 
         public DesktopArrange(Copier copier, Logger logger)
         {
@@ -26,13 +28,7 @@ namespace WBAssistantF.Module.USB
             copier.UsbChange += Copier_USBChange;
             watcher = new FileSystemWatcher(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory));
             watcher.Created += Watcher_Created;
-        }
-
-        [STAThread]
-        void sleepAndTidy()
-        {
-            Thread.Sleep(2400000);
-            tidyDesktop();
+            timer.Elapsed += (s, e) => { tidyDesktop(); };
         }
 
         public void Stop()
@@ -52,11 +48,9 @@ namespace WBAssistantF.Module.USB
         }
 
         public Dictionary<string, string> scheculedMove = new Dictionary<string, string>();
-
         private void Watcher_Created(object sender, FileSystemEventArgs e)
         {
             if (!File.Exists(e.FullPath) && !Directory.Exists(e.FullPath)) return;
-            
 
             var destFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
 
@@ -66,10 +60,9 @@ namespace WBAssistantF.Module.USB
                 destFolder += "\\其他";
 
             if (destFolder == e.FullPath) return;
-
-            scheculedMove.Add(destFolder, e.FullPath);
-            Task.Factory.StartNew(sleepAndTidy);
-
+            timer.Stop(); timer.Start();    // reset timer.
+            scheculedMove.TryAdd(destFolder, e.FullPath);
+            
             //var thread = new Thread(() =>
             //{
             //    var oriSource = File.Exists(e.FullPath)
@@ -90,42 +83,8 @@ namespace WBAssistantF.Module.USB
             //    if (msgBox.Top < 0) msgBox.Top = 0;
             //    msgBox.Show();
             //    msgBox.ShowMovingAnim();
-            //    try
-            //    {
-            //        var thread = new Thread(() =>
-            //        {
-            //            try
-            //            {
-            //                if (destFolder == e.FullPath) return;
-            //                if (!Directory.Exists(destFolder)) Directory.CreateDirectory(destFolder);
+        
 
-            //                if (isFile)
-            //                {
-            //                    if (File.Exists(e.FullPath)) File.Delete(destFolder + "\\" + e.Name);
-            //                    File.Move(e.FullPath, destFolder + "\\" + e.Name);
-            //                }
-            //                else
-            //                    Directory.Move(e.FullPath, destFolder + "\\" + e.Name);
-            //            }
-            //            catch (Exception ex)
-            //            {
-            //                _logger.LogE("移动文件时出现了错误：\n" + ex.Message);
-            //            }
-
-            //            OpenFile(destFolder);
-            //            Thread.Sleep(6000);
-            //            msgBox.Dispatcher.InvokeShutdown();
-            //        });
-            //        thread.SetApartmentState(ApartmentState.STA);
-            //        thread.Start();
-
-            //        Dispatcher.Run();
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        _logger.LogE("整理文件时出现了错误：\n" + ex.Message);
-            //    }
-            //});
             //thread.SetApartmentState(ApartmentState.STA);
             //thread.Start();
         }

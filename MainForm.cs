@@ -17,17 +17,17 @@ namespace WBAssistantF
     {
         private const string Version = "2.6.0";
         private const string AppName = "WBAssistant";
-        
+
         private Config _cfg;
         public RichTextBox LogTextBox;
-        
+
         private RFileNodeL _fileNodeL; // file node of currently selected usb
         private RFileNode _fileNodeS; // same as above
         private List<UsbInfo> _infos;
         private Logger _logger;
         private UsbInfo _selectedInfo;
         private List<FileWatcher.RecentFile> _recentFiles;
-        
+
         private Copier _copier;
         private AutoPlay _autoPlay;
         private DesktopArrange _desktopArrange;
@@ -36,7 +36,7 @@ namespace WBAssistantF
 
         public MainForm()
         {
-            Environment.CurrentDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName) 
+            Environment.CurrentDirectory = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName)
                                              ?? Environment.CurrentDirectory;
             InitializeComponent();
         }
@@ -54,11 +54,11 @@ namespace WBAssistantF
             _desktopArrange = new DesktopArrange(_copier, _logger);
             _wallpaper = new WallpaperMain(_logger, _copier);
             _recentFiles = new List<FileWatcher.RecentFile>(FileWatcher.RecentFile.ReadRecentFiles());
-            _fileWatcher = new FileWatcher(_copier, _recentFiles);
+            _fileWatcher = new FileWatcher(_copier, _cfg, _recentFiles);
             _fileWatcher.RecentFileAdded += FileWatcherOnRecentFileAdded;
 
             if (_cfg.EnableDesktopArrange) _desktopArrange.Start();
-            
+
 
             _logger.LogC($"版本 {Version}, 由 Nutr1t07 (Nelson Xiao) 制作");
 
@@ -73,10 +73,10 @@ namespace WBAssistantF
             if (_cfg.AutoPlayEnAudio)
                 Task.Factory.StartNew(() =>
                     new AutoPlay(_logger).checkEnglishAudio(_cfg.AutoPlayEnAudioUnit, _cfg.AutoPlayEnAudioFileName));
-            
+
             Task.Factory.StartNew(() => _copier.StartCopierListen());
             Task.Factory.StartNew(() => _fileWatcher.Listen());
-            
+
             InitialConfigPage();
             RefreshUsbInfos();
             InitRecentFileListViewUi();
@@ -84,7 +84,7 @@ namespace WBAssistantF
             _copier.UsbChange += (insert, info) => RefreshUsbInfos();
         }
 
- 
+
 
         private void InitialConfigPage()
         {
@@ -111,42 +111,72 @@ namespace WBAssistantF
         }
 
         #region RecentFile UI logic
-        
+
         private void recentFile_listView_DoubleClick(object sender, EventArgs e)
         {
             string filepath = recentFile_listView.FocusedItem.SubItems[2].Text
-                .Replace("\\\\","\\");
-            if(filepath != "未知")
+                .Replace("\\\\", "\\");
+            if (filepath != "未知")
                 OpenFile(filepath);
             else
                 MessageBox.Show("文件路径未知，无法打开。");
-            
+
         }
-        
+
         private void FileWatcherOnRecentFileAdded(FileWatcher.RecentFile recentfile)
         {
-            recentFile_listView.BeginUpdate();
-            recentFile_listView.Items.Add(new ListViewItem(new[]
+            try
             {
+                Invoke(new Action(() =>
+                {
+                    recentFile_listView.BeginUpdate();
+                    var newItem = new ListViewItem(new[]
+                    {
+                DateTimeOffset.FromUnixTimeSeconds(recentfile.OpenTime).LocalDateTime.ToString("HH:mm"),
                 recentfile.FileName,
-                DateTimeOffset.FromUnixTimeSeconds(recentfile.OpenTime).LocalDateTime.ToString("MM-dd HH:mm"),
+                recentfile.Owner,
                 recentfile.FilePath
-            }));
-            recentFile_listView.EndUpdate();
+            });
+                    newItem.Group = recentFile_listView.Groups[0];
+                    recentFile_listView.Items.Add(newItem);
+                    recentFile_listView.EndUpdate();
+                }));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogE("Error occured when adding files to Recent:\n"
+                    + ex.Message);
+            };
+
         }
 
         private void InitRecentFileListViewUi()
         {
             recentFile_listView.BeginUpdate();
-            foreach (var recentFile in _recentFiles)
+            string curr_Day = DateTime.Now.ToString("yyyy-MM-dd ddd");
+            ListViewGroup lvg = new ListViewGroup(curr_Day);
+            for (int i = _recentFiles.Count - 1; i >= 0; --i)
             {
-                recentFile_listView.Items.Add(new ListViewItem(new[]
+                var recentFile = _recentFiles[i];
+                var dt = DateTimeOffset.FromUnixTimeSeconds(recentFile.OpenTime).LocalDateTime;
+                string dtTimeStr = dt.ToString("yyyy-MM-dd ddd");
+                if (dtTimeStr != curr_Day)
                 {
+                    recentFile_listView.Groups.Add(lvg);
+                    curr_Day = dtTimeStr;
+                    lvg = new ListViewGroup(curr_Day);
+                }
+                var newItem = new ListViewItem(new[]
+                {
+                    dt.ToString("HH:mm"),
                     recentFile.FileName,
-                    DateTimeOffset.FromUnixTimeSeconds(recentFile.OpenTime).LocalDateTime.ToString("MM-dd HH:mm"),
+                    recentFile.Owner,
                     recentFile.FilePath
-                }));    
+                });
+                newItem.Group = lvg;
+                recentFile_listView.Items.Add(newItem);
             }
+            recentFile_listView.Groups.Add(lvg);
             recentFile_listView.EndUpdate();
         }
 
@@ -201,13 +231,13 @@ namespace WBAssistantF
 
             string pnp, ver;
 
-            if (node is {Parent: null})     //  double clicked on an usb name 
+            if (node is { Parent: null })     //  double clicked on an usb name 
             {
                 pnp = node.Nodes[6].Text[7..];
                 var verstr = node.Nodes[7].Nodes[0].Text;
                 ver = verstr[..^3] + verstr[^2..];
             }
-            else if (node is {Parent: {Text: "文件树"}})  // double click on an filetree versiop 
+            else if (node is { Parent: { Text: "文件树" } })  // double click on an filetree versiop 
             {
                 ver = node.Text[..^3] + node.Text[^2..];
                 pnp = node.Parent.Parent.Nodes[6].Text[7..];
@@ -255,7 +285,7 @@ namespace WBAssistantF
                 if (node == null)
                     return;
 
-                Utils.ForAll(usbInfo_menu.Items, x => ((ToolStripItem) x).Enabled = false);
+                Utils.ForAll(usbInfo_menu.Items, x => ((ToolStripItem)x).Enabled = false);
                 if (node.Parent == null)
                 {
                     exclude_usbInfo_menuItem.Enabled = true;
@@ -538,36 +568,36 @@ namespace WBAssistantF
         {
             if (interval.TotalDays > 365)
             {
-                var year = (int) interval.TotalDays / 365;
-                var month = (int) interval.TotalDays % 365 / 31;
+                var year = (int)interval.TotalDays / 365;
+                var month = (int)interval.TotalDays % 365 / 31;
                 return $"{year}年{month}月";
             }
 
             if (interval.TotalDays > 31)
             {
-                var month = (int) interval.TotalDays / 31;
-                var day = (int) interval.TotalDays % 31;
+                var month = (int)interval.TotalDays / 31;
+                var day = (int)interval.TotalDays % 31;
                 return $"{month}月{day}天";
             }
 
             if (interval.TotalHours > 23)
             {
-                var day = (int) interval.TotalHours / 24;
-                var hour = (int) interval.TotalHours % 24;
+                var day = (int)interval.TotalHours / 24;
+                var hour = (int)interval.TotalHours % 24;
                 return $"{day}天{hour}小时";
             }
 
             if (interval.TotalMinutes > 59)
             {
-                var hour = (int) interval.TotalMinutes / 59;
-                var min = (int) interval.TotalMinutes % 59;
+                var hour = (int)interval.TotalMinutes / 59;
+                var min = (int)interval.TotalMinutes % 59;
                 return $"{hour}小时{min}分钟";
             }
 
             if (interval.TotalSeconds > 59)
             {
-                var min = (int) interval.TotalSeconds / 59;
-                var sec = (int) interval.TotalSeconds % 59;
+                var min = (int)interval.TotalSeconds / 59;
+                var sec = (int)interval.TotalSeconds % 59;
                 return $"{min}分钟{sec}秒";
             }
 

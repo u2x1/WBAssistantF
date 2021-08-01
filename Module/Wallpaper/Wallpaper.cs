@@ -11,7 +11,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using WallEffect;
 using WBAssistantF.Module.USB;
 using WPFWindow;
 
@@ -29,9 +28,7 @@ namespace WBAssistantF.Module.Wallpaper
 
         private int _insertedCount;
         private bool _notProceedingScreen = true;
-        private Thread _thread;
 
-        private MainWindow _window;
 
         public WallpaperMain(Logger lgr, Copier copier)
         {
@@ -152,61 +149,65 @@ namespace WBAssistantF.Module.Wallpaper
             }
         }
 
+        private Thread _thread;
         private void BlackIn()
         {
-            _thread = new Thread(() =>
-            {
-                while (_blackedScreen) Thread.Sleep(1000);
-
-                _window = new MainWindow
-                {
-                    Left = -9999,
-                    Top = -9999,
-                    Width = 0,
-                    Height = 0
-                };
-                setBackground(_window);
-                var progman = W32.FindWindow("Progman", null);
-                W32.SendMessageTimeout(progman,
-                    0x052C,
-                    new IntPtr(0),
-                    IntPtr.Zero,
-                    W32.SendMessageTimeoutFlags.SMTO_NORMAL,
-                    1000,
-                    out var _);
-
-                var workerw = IntPtr.Zero;
-                W32.EnumWindows((tophandle, topparamhandle) =>
-                {
-                    var p = W32.FindWindowEx(tophandle,
-                        IntPtr.Zero,
-                        "SHELLDLL_DefView",
-                        IntPtr.Zero);
-
-                    if (p != IntPtr.Zero)
-                        // Gets the WorkerW Window after the current one.
-                        workerw = W32.FindWindowEx(IntPtr.Zero,
-                            tophandle,
-                            "WorkerW",
-                            IntPtr.Zero);
-
-                    return true;
-                }, IntPtr.Zero);
-
-                _window.Loaded += (s, e) => { W32.SetParent(new WindowInteropHelper(_window).Handle, workerw); };
-
-                //// Start the Application Loop for the Form.
-                _window.Show();
-                _window.BlackOut();
-                _window.Height = SystemParameters.PrimaryScreenHeight + 14;
-                _window.Width = SystemParameters.PrimaryScreenWidth + 14;
-                _window.Left = -7;
-                _window.Top = -7;
-                _blackedScreen = true;
-                Dispatcher.Run();
-            });
+            _thread = new Thread(startWindow);
             _thread.SetApartmentState(ApartmentState.STA);
             _thread.Start();
+        }
+
+        private MainWindow _window;
+        private void startWindow()
+        {
+            while (_blackedScreen) Thread.Sleep(1000);
+
+            _window = new MainWindow
+            {
+                Left = -9999,
+                Top = -9999,
+                Width = 0,
+                Height = 0
+            };
+            setBackground(_window);
+            var progman = W32.FindWindow("Progman", null);
+            W32.SendMessageTimeout(progman,
+                0x052C,
+                new IntPtr(0),
+                IntPtr.Zero,
+                W32.SendMessageTimeoutFlags.SMTO_NORMAL,
+                1000,
+                out var _);
+
+            var workerw = IntPtr.Zero;
+            W32.EnumWindows((tophandle, topparamhandle) =>
+            {
+                var p = W32.FindWindowEx(tophandle,
+                    IntPtr.Zero,
+                    "SHELLDLL_DefView",
+                    IntPtr.Zero);
+
+                if (p != IntPtr.Zero)
+                    // Gets the WorkerW Window after the current one.
+                    workerw = W32.FindWindowEx(IntPtr.Zero,
+                        tophandle,
+                        "WorkerW",
+                        IntPtr.Zero);
+
+                return true;
+            }, IntPtr.Zero);
+
+            _window.Loaded += (s, e) => { W32.SetParent(new WindowInteropHelper(_window).Handle, workerw); };
+
+            //// Start the Application Loop for the Form.
+            _window.Show();
+            _window.BlackOut();
+            _window.Height = SystemParameters.PrimaryScreenHeight + 14;
+            _window.Width = SystemParameters.PrimaryScreenWidth + 14;
+            _window.Left = -7;
+            _window.Top = -7;
+            _blackedScreen = true;
+            Dispatcher.Run();
         }
 
         private void BlackOut()
@@ -216,7 +217,6 @@ namespace WBAssistantF.Module.Wallpaper
             {
                 _window.OutAnim(() =>
                 {
-                    //window.Dispatcher.Invoke(() => { window.Close(); });
                     _window.Dispatcher.InvokeShutdown();
                     GC.Collect();
                     _blackedScreen = false;
