@@ -18,9 +18,7 @@ namespace WBAssistantF.Module.USB
         private UsbInfo currentInfo;
         private int insertedCount;
         private readonly FileSystemWatcher watcher;
-        //System.Timers.Timer timer = new System.Timers.Timer(2400000);
-
-        System.Timers.Timer timer = new System.Timers.Timer(1400);
+        private readonly System.Timers.Timer timer = new System.Timers.Timer(1400);
 
         public DesktopArrange(Copier copier, Logger logger)
         {
@@ -62,31 +60,6 @@ namespace WBAssistantF.Module.USB
             if (destFolder == e.FullPath) return;
             timer.Stop(); timer.Start();    // reset timer.
             scheculedMove.TryAdd(destFolder, e.FullPath);
-            
-            //var thread = new Thread(() =>
-            //{
-            //    var oriSource = File.Exists(e.FullPath)
-            //        ? Icon.ExtractAssociatedIcon(e.FullPath)
-            //        : DefaultIcons.FolderLarge;
-            //    var msgBox = new MovingMsgBox(
-            //        e.FullPath,
-            //        destFolder,
-            //        toSource(oriSource),
-            //        toSource(DefaultIcons.FolderLarge)
-            //    )
-            //    {
-            //        WindowStartupLocation = WindowStartupLocation.Manual
-            //    };
-            //    msgBox.Left = Cursor.Position.X - msgBox.Width / 2;
-            //    msgBox.Top = Cursor.Position.Y - msgBox.Height * 1.5;
-            //    if (msgBox.Left < 0) msgBox.Left = 0;
-            //    if (msgBox.Top < 0) msgBox.Top = 0;
-            //    msgBox.Show();
-            //    msgBox.ShowMovingAnim();
-        
-
-            //thread.SetApartmentState(ApartmentState.STA);
-            //thread.Start();
         }
 
         private void Copier_USBChange(bool IsInsert, UsbInfo? info)

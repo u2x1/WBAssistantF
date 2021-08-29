@@ -2,17 +2,18 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net6.0-windows7.0</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <!-- <PublishTrimmed>true</PublishTrimmed> -->
     <!-- <TrimMode>link</TrimMode> -->
     <!-- <PublishReadyToRun>true</PublishReadyToRun> -->
     <!-- <PublishSingleFile>true</PublishSingleFile> -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <StartupObject></StartupObject>
+    <StartupObject>WBAssistantF.Program</StartupObject>
     <Authors>Nutr1t07</Authors>
     <ApplicationIcon>icon\tray.ico</ApplicationIcon>
     <NoWin32Manifest>true</NoWin32Manifest>
+    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

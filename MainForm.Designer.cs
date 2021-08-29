@@ -46,6 +46,7 @@ namespace WBAssistantF
             this.recentFile_listView = new System.Windows.Forms.ListView();
             this.columnHeader5 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader4 = new System.Windows.Forms.ColumnHeader();
+            this.columnHeader7 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
             this.log_tabPage = new System.Windows.Forms.TabPage();
             this.config_tabPage = new System.Windows.Forms.TabPage();
@@ -93,7 +94,6 @@ namespace WBAssistantF
             this.columnHeader1 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader2 = new System.Windows.Forms.ColumnHeader();
             this.columnHeader3 = new System.Windows.Forms.ColumnHeader();
-            this.columnHeader7 = new System.Windows.Forms.ColumnHeader();
             this.notify_menu.SuspendLayout();
             this.tabControl.SuspendLayout();
             this.recent_tabPage.SuspendLayout();
@@ -212,7 +212,6 @@ namespace WBAssistantF
             this.columnHeader6});
             this.recentFile_listView.Dock = System.Windows.Forms.DockStyle.Fill;
             this.recentFile_listView.FullRowSelect = true;
-            this.recentFile_listView.HideSelection = false;
             this.recentFile_listView.Location = new System.Drawing.Point(3, 3);
             this.recentFile_listView.Margin = new System.Windows.Forms.Padding(3, 2, 3, 2);
             this.recentFile_listView.Name = "recentFile_listView";
@@ -233,6 +232,10 @@ namespace WBAssistantF
             this.columnHeader4.DisplayIndex = 0;
             this.columnHeader4.Text = "文件名";
             this.columnHeader4.Width = 200;
+            // 
+            // columnHeader7
+            // 
+            this.columnHeader7.Text = "所有者";
             // 
             // columnHeader6
             // 
@@ -410,6 +413,7 @@ namespace WBAssistantF
             this.groupBox1.Controls.Add(this.enUnit_textBox);
             this.groupBox1.Controls.Add(this.checkBox5);
             this.groupBox1.Controls.Add(this.checkBox4);
+            this.groupBox1.Enabled = false;
             this.groupBox1.Location = new System.Drawing.Point(13, 259);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(611, 136);
@@ -688,10 +692,6 @@ namespace WBAssistantF
             this.columnHeader3.DisplayIndex = 2;
             this.columnHeader3.Text = "播放时间";
             this.columnHeader3.Width = 200;
-            // 
-            // columnHeader7
-            // 
-            this.columnHeader7.Text = "所有者";
             // 
             // MainForm
             // 

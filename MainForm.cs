@@ -189,37 +189,41 @@ namespace WBAssistantF
         /// </summary>
         private void RefreshUsbInfos()
         {
-            try
+            usbInfo_TreeView.Invoke(() =>
             {
-                _infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos());
-                usbInfo_TreeView.BeginUpdate();
-                usbInfo_TreeView.Nodes.Clear();
-
-                for (var i = 0; i < _infos.Count; ++i)
+                try
                 {
-                    var info = _infos[i];
-                    var lastMdTime = DateTimeOffset.FromUnixTimeSeconds(info.LastModified).LocalDateTime;
+                    _infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos());
+                    usbInfo_TreeView.BeginUpdate();
+                    usbInfo_TreeView.Nodes.Clear();
 
-                    usbInfo_TreeView.Nodes.Add($"{info.Remark} ({info.VolumeLabel}) ({CalculateLastTime(lastMdTime)})");
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("最后修改: " + lastMdTime.ToString("yyyy-MM-dd HH:mm"));
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("插入次数: " + info.PlugInTimes);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("白名单: " + info.Excluded);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("总文件数: " + info.FileCount);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("已复制文件数: " + info.CopiedFileCount);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("保存路径: " + info.SavePath);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("设备PNP: " + info.PnpDeviceId);
-                    usbInfo_TreeView.Nodes[i].Nodes.Add("文件树");
-                    foreach (var x in info.FileTreeVersions)
-                        usbInfo_TreeView.Nodes[i].Nodes[7].Nodes.Add(x[..^2] + ":" + x[^2..]);
+                    for (var i = 0; i < _infos.Count; ++i)
+                    {
+                        var info = _infos[i];
+                        var lastMdTime = DateTimeOffset.FromUnixTimeSeconds(info.LastModified).LocalDateTime;
+
+                        usbInfo_TreeView.Nodes.Add($"{info.Remark} ({info.VolumeLabel}) ({CalculateLastTime(lastMdTime)})");
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("最后修改: " + lastMdTime.ToString("yyyy-MM-dd HH:mm"));
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("插入次数: " + info.PlugInTimes);
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("白名单: " + info.Excluded);
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("总文件数: " + info.FileCount);
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("已复制文件数: " + info.CopiedFileCount);
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("保存路径: " + info.SavePath);
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("设备PNP: " + info.PnpDeviceId);
+                        usbInfo_TreeView.Nodes[i].Nodes.Add("文件树");
+                        foreach (var x in info.FileTreeVersions)
+                            usbInfo_TreeView.Nodes[i].Nodes[7].Nodes.Add(x[..^2] + ":" + x[^2..]);
+                    }
+
+                    usbInfo_TreeView.EndUpdate();
                 }
+                catch (Exception ex)
+                {
+                    usbInfo_TreeView.EndUpdate();
+                    _logger.LogE($"刷新USB信息时出现了错误：\n{ex.Message}");
+                }
+            });
 
-                usbInfo_TreeView.EndUpdate();
-            }
-            catch (Exception ex)
-            {
-                usbInfo_TreeView.EndUpdate();
-                _logger.LogE($"刷新USB信息时出现了错误：\n{ex.Message}");
-            }
         }
 
         private void usbInfo_TreeView_DoubleClick(object sender, EventArgs e)
