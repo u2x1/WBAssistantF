@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Win32;
 using WBAssistantF.Module.AutoPlay;
+using WBAssistantF.Module.KeyboardDetect;
 using WBAssistantF.Module.USB;
 using WBAssistantF.Module.Wallpaper;
 using WBAssistantF.Util;
@@ -15,11 +16,11 @@ namespace WBAssistantF
 {
     public partial class MainForm : Form
     {
-        private const string Version = "2.6.0";
+        private const string Version = "2.7.0";
         private const string AppName = "WBAssistant";
 
         private Config _cfg;
-        public RichTextBox LogTextBox;
+        public RichTextBox LogTextBox { get; private set; }
 
         private RFileNodeL _fileNodeL; // file node of currently selected usb
         private RFileNode _fileNodeS; // same as above
@@ -33,6 +34,7 @@ namespace WBAssistantF
         private DesktopArrange _desktopArrange;
         private WallpaperMain _wallpaper;
         private FileWatcher _fileWatcher;
+        private KeyboardDetect _keyboardDetect;
 
         public MainForm()
         {
@@ -47,6 +49,8 @@ namespace WBAssistantF
                 Screen.PrimaryScreen.WorkingArea.Height - Height);
             LogTextBox = logTextBox;
             _logger = new Logger(this);
+            _logger.LogC($"版本 {Version}, 由 Nutr1t07 (Nelson Xiao) 制作");
+
             _cfg = Config.ParseConfig("WBAData\\config.txt", _logger);
             _infos = new List<UsbInfo>(UsbInfo.ReadBasicInfos());
             _copier = new Copier(_logger, ref _cfg, ref _infos);
@@ -54,13 +58,10 @@ namespace WBAssistantF
             _desktopArrange = new DesktopArrange(_copier, _logger);
             _wallpaper = new WallpaperMain(_logger, _copier);
             _recentFiles = new List<FileWatcher.RecentFile>(FileWatcher.RecentFile.ReadRecentFiles());
-            _fileWatcher = new FileWatcher(_copier, _cfg, _recentFiles);
+            _fileWatcher = new FileWatcher(_copier, _cfg, _logger, _recentFiles);
             _fileWatcher.RecentFileAdded += FileWatcherOnRecentFileAdded;
+            _keyboardDetect = new KeyboardDetect(_cfg, _logger);
 
-            if (_cfg.EnableDesktopArrange) _desktopArrange.Start();
-
-
-            _logger.LogC($"版本 {Version}, 由 Nutr1t07 (Nelson Xiao) 制作");
 
             if (!Directory.Exists("WBAData"))
             {
@@ -72,10 +73,11 @@ namespace WBAssistantF
             if (_cfg.AutoPlayFtp) Task.Factory.StartNew(() => new AutoPlay(_logger).CheckFtp(this));
             if (_cfg.AutoPlayEnAudio)
                 Task.Factory.StartNew(() =>
-                    new AutoPlay(_logger).checkEnglishAudio(_cfg.AutoPlayEnAudioUnit, _cfg.AutoPlayEnAudioFileName));
+                     AutoPlay.CheckEnglishAudio(_cfg.AutoPlayEnAudioUnit, _cfg.AutoPlayEnAudioFileName));
 
             Task.Factory.StartNew(() => _copier.StartCopierListen());
             Task.Factory.StartNew(() => _fileWatcher.Listen());
+            _keyboardDetect.StartHook();
 
             InitialConfigPage();
             RefreshUsbInfos();
@@ -88,7 +90,7 @@ namespace WBAssistantF
 
         private void InitialConfigPage()
         {
-            var registryKey =
+            RegistryKey registryKey =
                 Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
             checkBox1.Checked = registryKey?.GetValue(AppName) != null;
             checkBox2.Checked = _cfg.RefreshWallpaper;
@@ -102,6 +104,8 @@ namespace WBAssistantF
             savePath_textBox.Text = _cfg.SavePath;
             enUnit_textBox.Text = _cfg.AutoPlayEnAudioUnit;
             enFileName_textBox.Text = _cfg.AutoPlayEnAudioFileName;
+            shortCutID_textBox.Text = Enum.GetName(typeof(System.Windows.Input.Key), _cfg.ShortCut);
+            shortCutCmd_textBox.Text = _cfg.ShortCutCmd;
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
@@ -132,12 +136,14 @@ namespace WBAssistantF
                     recentFile_listView.BeginUpdate();
                     var newItem = new ListViewItem(new[]
                     {
-                DateTimeOffset.FromUnixTimeSeconds(recentfile.OpenTime).LocalDateTime.ToString("HH:mm"),
                 recentfile.FileName,
+                DateTimeOffset.FromUnixTimeSeconds(recentfile.OpenTime).LocalDateTime.ToString("HH:mm"),
                 recentfile.Owner,
                 recentfile.FilePath
-            });
-                    newItem.Group = recentFile_listView.Groups[0];
+            })
+                    {
+                        Group = recentFile_listView.Groups[0]
+                    };
                     recentFile_listView.Items.Add(newItem);
                     recentFile_listView.EndUpdate();
                 }));
@@ -168,12 +174,14 @@ namespace WBAssistantF
                 }
                 var newItem = new ListViewItem(new[]
                 {
-                    dt.ToString("HH:mm"),
                     recentFile.FileName,
+                    dt.ToString("HH:mm"),
                     recentFile.Owner,
                     recentFile.FilePath
-                });
-                newItem.Group = lvg;
+                })
+                {
+                    Group = lvg
+                };
                 recentFile_listView.Items.Add(newItem);
             }
             recentFile_listView.Groups.Add(lvg);
@@ -199,8 +207,9 @@ namespace WBAssistantF
 
                     for (var i = 0; i < _infos.Count; ++i)
                     {
-                        var info = _infos[i];
-                        var lastMdTime = DateTimeOffset.FromUnixTimeSeconds(info.LastModified).LocalDateTime;
+                        UsbInfo info = _infos[i];
+                        DateTime lastMdTime =
+                               DateTimeOffset.FromUnixTimeSeconds(info.LastModified).LocalDateTime;
 
                         usbInfo_TreeView.Nodes.Add($"{info.Remark} ({info.VolumeLabel}) ({CalculateLastTime(lastMdTime)})");
                         usbInfo_TreeView.Nodes[i].Nodes.Add("最后修改: " + lastMdTime.ToString("yyyy-MM-dd HH:mm"));
@@ -389,7 +398,7 @@ namespace WBAssistantF
                 e.Node.Nodes[i].Nodes.Add("|"); //placeholder
             }
 
-            foreach (var t in rn.ChildLeafs)
+            foreach (string t in rn.ChildLeafs)
                 e.Node.Nodes.Add(t);
 
             if (e.Node.Nodes.Count == 0) e.Node.Nodes.Add("=== 空文件夹 ===");
@@ -427,7 +436,7 @@ namespace WBAssistantF
                 return;
             }
 
-            if (_fileNodeL.RawData.IndexOf(text) == -1)
+            if (!_fileNodeL.RawData.Contains(text, StringComparison.CurrentCulture))
             {
                 fileTree_treeView.BeginUpdate();
                 fileTree_treeView.Nodes.Clear();
@@ -482,7 +491,7 @@ namespace WBAssistantF
                 Task.Factory.StartNew(() => _autoPlay.CheckFtp(this, true));
             else if (item == playAudio_menuItem)
                 Task.Factory.StartNew(() =>
-                    _autoPlay.checkEnglishAudio(_cfg.AutoPlayEnAudioUnit, _cfg.AutoPlayEnAudioFileName, true));
+                    AutoPlay.CheckEnglishAudio(_cfg.AutoPlayEnAudioUnit, _cfg.AutoPlayEnAudioFileName, true));
             else if (item == EnglishUnitPlusMenuItem)
             {
                 _cfg.AutoPlayEnAudioUnit = _cfg.AutoPlayEnAudioUnit[0] >= '8'
@@ -568,7 +577,7 @@ namespace WBAssistantF
             p.Start();
         }
 
-        private string timeSpan2String(TimeSpan interval)
+        private static string timeSpan2String(TimeSpan interval)
         {
             if (interval.TotalDays > 365)
             {
@@ -608,7 +617,7 @@ namespace WBAssistantF
             return $"{interval.TotalSeconds}秒";
         }
 
-        private string CalculateLastTime(DateTime dateTime)
+        private static string CalculateLastTime(DateTime dateTime)
         {
             var interval = DateTime.Now - dateTime;
             return timeSpan2String(interval) + "前";
@@ -651,7 +660,7 @@ namespace WBAssistantF
             var registryKey =
                 Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
             if (checkBox1.Checked)
-                registryKey.SetValue(AppName, Process.GetCurrentProcess().MainModule.FileName);
+                registryKey.SetValue(AppName, Environment.ProcessPath);
             else
                 registryKey.DeleteValue(AppName);
         }
@@ -699,6 +708,27 @@ namespace WBAssistantF
         private void checkBox4_CheckedChanged(object sender, EventArgs e)
         {
             _cfg.AutoPlayFtp = checkBox4.Checked;
+            _cfg.SaveConfig();
+        }
+
+        private void saveShortCutID_btn_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                System.Windows.Input.Key k = (System.Windows.Input.Key)Enum.Parse(typeof(System.Windows.Input.Key), shortCutID_textBox.Text);
+                _cfg.ShortCut = (byte)k;
+                _cfg.SaveConfig();
+                _keyboardDetect.StartHook();
+            }
+            catch(Exception)
+            {
+                MessageBox.Show("未知的键。");
+            }
+        }
+
+        private void saveShortCutCmd_btn_Click(object sender, EventArgs e)
+        {
+            _cfg.ShortCutCmd = shortCutCmd_textBox.Text;
             _cfg.SaveConfig();
         }
         #endregion

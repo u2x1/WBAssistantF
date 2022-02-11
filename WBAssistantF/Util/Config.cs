@@ -3,7 +3,7 @@ using System.IO;
 
 namespace WBAssistantF.Util
 {
-    internal class Config
+    public class Config
     {
         private Logger _logger;
         public bool AutoOpenExplorer = true;
@@ -15,6 +15,8 @@ namespace WBAssistantF.Util
         public string[] Extension = {"doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf", "txt"};
         public bool RefreshWallpaper;
         public bool RejectNewDevice = true;
+        public byte ShortCut;
+        public string ShortCutCmd = "explorer.exe wtf.exe";
         public string SavePath = Environment.CurrentDirectory + "\\save";
 
         public static Config ParseConfig(string path, Logger logger)
@@ -34,7 +36,9 @@ namespace WBAssistantF.Util
                     AutoPlayEnAudioUnit = cfg[6],
                     AutoPlayEnAudioFileName = cfg[7],
                     RejectNewDevice = bool.Parse(cfg[8]),
-                    EnableDesktopArrange = bool.Parse(cfg[9])
+                    EnableDesktopArrange = bool.Parse(cfg[9]),
+                    ShortCut = byte.Parse(cfg[10]),
+                    ShortCutCmd = cfg[11],
                 };
             }
             catch (Exception e)
@@ -66,7 +70,9 @@ namespace WBAssistantF.Util
                 AutoPlayEnAudioUnit,
                 AutoPlayEnAudioFileName,
                 RejectNewDevice.ToString(),
-                EnableDesktopArrange.ToString()
+                EnableDesktopArrange.ToString(),
+                ShortCut.ToString(),
+                ShortCutCmd.ToString()
             }, '\n');
 
             try

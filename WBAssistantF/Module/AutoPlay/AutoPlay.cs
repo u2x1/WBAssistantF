@@ -30,7 +30,7 @@ namespace WBAssistantF.Module.AutoPlay
             form.Invoke(new Action(form.Hide));
         }
 
-        public void checkEnglishAudio(string unit, string filename, bool forceCheck = false)
+        public static void CheckEnglishAudio(string unit, string filename, bool forceCheck = false)
         {
             if (!forceCheck)
             {
@@ -50,9 +50,9 @@ namespace WBAssistantF.Module.AutoPlay
                     var files = Directory.GetFiles(dirName);
                     foreach (var file in files)
                     {
-                        if (file.IndexOf(filename, StringComparison.Ordinal) == -1) continue;
+                        if (!file.Contains(filename)) continue;
                         OpenFile(file);
-                        adjustVolume(0.7f);
+                        AdjustVolume(0.7f);
                         return;
                     }
                 }
@@ -64,10 +64,10 @@ namespace WBAssistantF.Module.AutoPlay
             {
                 _logger.LogI("正在获取文件夹列表");
                 var ftpRoot = "ftp://192.168.2.8/校园电视台/";
-                var req = (FtpWebRequest) WebRequest.Create(ftpRoot);
+                var req = (FtpWebRequest)WebRequest.Create(ftpRoot);
                 req.Method = WebRequestMethods.Ftp.ListDirectory;
                 _logger.LogI("hit when list directory.");
-                var response = (FtpWebResponse) req.GetResponse();
+                var response = (FtpWebResponse)req.GetResponse();
 
                 var responseStream = response.GetResponseStream();
                 var reader = new StreamReader(responseStream);
@@ -93,7 +93,7 @@ namespace WBAssistantF.Module.AutoPlay
                 }
 
                 // Start downloading file
-                var request = (FtpWebRequest) WebRequest.Create(ftpRoot + finalFilename);
+                var request = (FtpWebRequest)WebRequest.Create(ftpRoot + finalFilename);
                 request.Method = WebRequestMethods.Ftp.DownloadFile;
 
                 using var ftpStream = request.GetResponse().GetResponseStream();
@@ -116,7 +116,7 @@ namespace WBAssistantF.Module.AutoPlay
             }
             catch (WebException e)
             {
-                _logger.LogE("从FTP下载文件失败：" + e.Message + "\n" + ((FtpWebResponse) e.Response).StatusDescription);
+                _logger.LogE("从FTP下载文件失败：" + e.Message + "\n" + ((FtpWebResponse)e.Response).StatusDescription);
                 return "";
             }
             catch (Exception ex)
@@ -138,7 +138,7 @@ namespace WBAssistantF.Module.AutoPlay
             p.Start();
         }
 
-        private void adjustVolume(float value)
+        private static void AdjustVolume(float value)
         {
             var devEnum = new MMDeviceEnumerator();
             var defaultDevice = devEnum.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);

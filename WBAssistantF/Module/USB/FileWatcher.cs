@@ -1,4 +1,7 @@
-﻿using WBAssistantF.Util;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using WBAssistantF.Util;
 using WPFWindow;
 
 #nullable enable
@@ -13,19 +16,22 @@ namespace WBAssistantF.Module.USB
         private readonly List<RecentFile> _recentFiles;
         private readonly Copier _copier;
         private readonly Config _config;
+        private readonly Logger _logger;
 
         private readonly WindowDetect _windowDetect = new();
 
-        public FileWatcher(Copier copier, Config config, List<RecentFile> recentFiles)
+        public FileWatcher(Copier copier, Config config, Logger logger, List<RecentFile> recentFiles)
         {
             _config = config;
             _copier = copier;
+            _logger = logger;
             _recentFiles = recentFiles ?? new List<RecentFile>();
         }
 
         public void Listen()
         {
             _windowDetect.NewWindowOpened += WindowDetectOnNewWindowOpened;
+            _logger.LogC("窗口侦测监听中");
             _windowDetect.Listen();
         }
 

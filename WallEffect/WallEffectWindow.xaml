@@ -1,0 +1,30 @@
+﻿<Window x:Class="WPFWindow.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Height="450" Width="1000" WindowStyle="None" Left="-7" Top="-7">
+    <Grid>
+        <Rectangle Name="leftRec" Width="0" HorizontalAlignment="Left" >
+            <Rectangle.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Color="#FF646464"/>
+                    <GradientStop Color="#FF595959" Offset="1"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+        <Rectangle Name="rightRec" Width="0" HorizontalAlignment="Right">
+            <Rectangle.Fill>
+                <RadialGradientBrush>
+                    <GradientStop Color="#FF646464"/>
+                    <GradientStop Color="#FF595959" Offset="1"/>
+                </RadialGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+        <Image Name="imgBackground"/>
+    </Grid>
+    <Window.Background>
+        <ImageBrush/>
+    </Window.Background>
+</Window>

@@ -1,6 +1,11 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -47,12 +52,12 @@ namespace WBAssistantF.Module.Wallpaper
             }
         }
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int SystemParametersInfo(uint uiAction, uint uiParam, string pvParam, uint fWinIni);
 
         public void PickWallIfTimePermit()
         {
-            if (DateTime.Now.Hour < 14 || DateTime.Now.Hour > 15)
+            if (DateTime.Now.Hour is < 14 or > 15)
             {
                 _logger.LogW("只应在 14:00~15:00 期间切换新壁纸");
                 return;
@@ -63,18 +68,21 @@ namespace WBAssistantF.Module.Wallpaper
 
         public void PickWall()
         {
-            if (!Directory.Exists("walls"))
+            if (!Directory.Exists("WBAData\\walls"))
+            {
+                _logger.LogE("未找到壁纸文件夹");
                 return;
+            }
             if (!File.Exists("WBAData\\usedWalls.txt"))
                 File.WriteAllText("WBAData\\usedWalls.txt", "");
 
             var usedWalls = File.ReadAllText("WBAData\\usedWalls.txt").Split('|');
-            List<string> paddingWalls = GetUnusedWalls("walls", usedWalls);
+            List<string> paddingWalls = GetUnusedWalls("WBAData\\walls", usedWalls);
             if (paddingWalls.Count == 0)
             {
                 File.WriteAllText("WBAData\\usedWalls.txt", "");
                 _logger.LogW("所有壁纸已经用完，开始新一次壁纸轮换");
-                return;
+                paddingWalls = GetUnusedWalls("WBAData\\walls", Array.Empty<string>());
             }
 
             _logger.LogI($"已用{usedWalls.Length}张壁纸，还剩下{paddingWalls.Count}张壁纸");
@@ -116,7 +124,7 @@ namespace WBAssistantF.Module.Wallpaper
             var bmpAbsPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName) +
                              "\\WBAData\\wall.bmp";
             new Bitmap(filename).Save(bmpAbsPath);
-            SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, bmpAbsPath, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
+            _ = SystemParametersInfo(SPI_SETDESKWALLPAPER, 0, bmpAbsPath, SPIF_UPDATEINIFILE | SPIF_SENDWININICHANGE);
         }
 
         private static BitmapSource ToBitmapSource(Bitmap btmap)
@@ -125,22 +133,34 @@ namespace WBAssistantF.Module.Wallpaper
                 BitmapSizeOptions.FromEmptyOptions());
         }
 
-        private void setBackground(MainWindow mw)
+        private static void SetBackground(MainWindow mw)
         {
             try
             {
+                var folder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                              + "\\Microsoft\\Windows\\Themes\\";
+                var path = string.Empty;
+                foreach (var p in Directory.GetFiles(folder))
+                {
+                    if (p.Contains("TranscodedWallpaper") && File.Exists(p))
+                    {
+                        path = p;
+                    }
+                }
+                if (path == string.Empty)
+                {
+                    return;
+                }
                 Bitmap bm;
-                using (var fs = new FileStream("WBAData\\wall.bmp", FileMode.Open))
+                using (var fs = new FileStream(path, FileMode.Open))
                 {
                     var bmp = new Bitmap(fs);
-                    bm = (Bitmap) bmp.Clone();
+                    bm = (Bitmap)bmp.Clone();
                 }
-
-                mw.Background = new ImageBrush(ToBitmapSource(bm)) {Stretch = Stretch.Uniform};
+                mw.Background = new ImageBrush(ToBitmapSource(bm)) { Stretch = Stretch.UniformToFill };
             }
             catch (Exception)
             {
-                // ignored
             }
         }
 
@@ -164,7 +184,7 @@ namespace WBAssistantF.Module.Wallpaper
                 Width = 0,
                 Height = 0
             };
-            setBackground(_window);
+            SetBackground(_window);
             var progman = W32.FindWindow("Progman", null);
             W32.SendMessageTimeout(progman,
                 0x052C,
@@ -172,7 +192,7 @@ namespace WBAssistantF.Module.Wallpaper
                 IntPtr.Zero,
                 W32.SendMessageTimeoutFlags.SMTO_NORMAL,
                 1000,
-                out var _);
+                out IntPtr _);
 
             var workerw = IntPtr.Zero;
             W32.EnumWindows((tophandle, topparamhandle) =>
@@ -197,10 +217,10 @@ namespace WBAssistantF.Module.Wallpaper
             //// Start the Application Loop for the Form.
             _window.Show();
             _window.BlackOut();
-            _window.Height = SystemParameters.PrimaryScreenHeight + 14;
-            _window.Width = SystemParameters.PrimaryScreenWidth + 14;
-            _window.Left = -7;
-            _window.Top = -7;
+            _window.Height = SystemParameters.PrimaryScreenHeight;
+            _window.Width = SystemParameters.PrimaryScreenWidth;
+            _window.Left = 0;
+            _window.Top = 0;
             _blackedScreen = true;
             Dispatcher.Run();
         }

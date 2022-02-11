@@ -4,21 +4,17 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 
 namespace WBAssistantF.Module.USB
 {
-    internal class DesktopArrange
+    internal class DesktopArrange : IDisposable
     {
         private readonly Logger _logger;
 
         private UsbInfo currentInfo;
         private int insertedCount;
         private readonly FileSystemWatcher watcher;
-        private readonly System.Timers.Timer timer = new System.Timers.Timer(1400);
+        private readonly System.Timers.Timer timer = new(14000);
 
         public DesktopArrange(Copier copier, Logger logger)
         {
@@ -37,29 +33,24 @@ namespace WBAssistantF.Module.USB
         public void Start()
         {
             watcher.EnableRaisingEvents = true;
+            _logger.LogC("桌面文件监控已启动");
         }
 
-        private ImageSource toSource(Icon ico)
-        {
-            return Imaging.CreateBitmapSourceFromHIcon(ico.Handle, Int32Rect.Empty,
-                BitmapSizeOptions.FromEmptyOptions());
-        }
-
-        public Dictionary<string, string> scheculedMove = new Dictionary<string, string>();
+        public Dictionary<string, string> scheculedMove = new();
         private void Watcher_Created(object sender, FileSystemEventArgs e)
         {
             if (!File.Exists(e.FullPath) && !Directory.Exists(e.FullPath)) return;
 
-            var destFolder = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
 
-            if (insertedCount > 0)
-                destFolder += "\\" + currentInfo.Remark;
-            else
-                destFolder += "\\其他";
+            var destFolderName = insertedCount > 0 ? currentInfo.Remark : "其他";
+            var destFullPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + "\\" + destFolderName;
 
-            if (destFolder == e.FullPath) return;
+            if (destFullPath == e.FullPath) return;
             timer.Stop(); timer.Start();    // reset timer.
-            scheculedMove.TryAdd(destFolder, e.FullPath);
+            if (scheculedMove.TryAdd(destFullPath, e.FullPath))
+            {
+                _logger.LogI("已将新的桌面文件添加至整理队列: " + e.Name + " -> " + destFolderName);
+            }
         }
 
         private void Copier_USBChange(bool IsInsert, UsbInfo? info)
@@ -143,6 +134,12 @@ namespace WBAssistantF.Module.USB
             thread.SetApartmentState(ApartmentState.STA);
             thread.Start();
         }
+
+        public void Dispose()
+        {
+            ((IDisposable)watcher).Dispose();
+            ((IDisposable)timer).Dispose();
+        }
     }
 
     // get it from https://stackoverflow.com/a/59129804
@@ -156,7 +153,7 @@ namespace WBAssistantF.Module.USB
 
         private static Icon folderIcon;
 
-        public static Icon FolderLarge => folderIcon ?? (folderIcon = GetStockIcon(SHSIID_FOLDER, SHGSI_LARGEICON));
+        public static Icon FolderLarge => folderIcon ??= GetStockIcon(SHSIID_FOLDER, SHGSI_LARGEICON);
 
         private static Icon GetStockIcon(uint type, uint size)
         {
@@ -172,10 +169,10 @@ namespace WBAssistantF.Module.USB
         }
 
         [DllImport("shell32.dll")]
-        public static extern int SHGetStockIconInfo(uint siid, uint uFlags, ref SHSTOCKICONINFO psii);
+        private static extern int SHGetStockIconInfo(uint siid, uint uFlags, ref SHSTOCKICONINFO psii);
 
         [DllImport("user32.dll")]
-        public static extern bool DestroyIcon(IntPtr handle);
+        private static extern bool DestroyIcon(IntPtr handle);
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         public struct SHSTOCKICONINFO

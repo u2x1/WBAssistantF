@@ -12,11 +12,11 @@ namespace WBAssistantF.Module.Wallpaper
 {
     internal class WallSwitchEffect
     {
-        private readonly MainWindow _window;
+        public readonly MainWindow window;
 
         public WallSwitchEffect()
         {
-            _window = new MainWindow
+            window = new MainWindow
             {
                 Left = -9999,
                 Top = -9999,
@@ -60,10 +60,10 @@ namespace WBAssistantF.Module.Wallpaper
                 return true;
             }, IntPtr.Zero);
 
-            _window.Loaded += (s, e) => { W32.SetParent(new WindowInteropHelper(_window).Handle, workerw); };
+            window.Loaded += (s, e) => { W32.SetParent(new WindowInteropHelper(window).Handle, workerw); };
 
             //// Start the Application Loop for the Form.
-            _window.Show();
+            window.Show();
         }
 
         private static BitmapSource ToBitmapSource(Bitmap btmap)
@@ -76,14 +76,28 @@ namespace WBAssistantF.Module.Wallpaper
         {
             try
             {
+                var folder = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+                               + "\\Microsoft\\Windows\\Themes\\";
+                var path = string.Empty;
+                foreach (var p in Directory.GetFiles(folder))
+                {
+                    if (p.Contains("TranscodedWallpaper") && File.Exists(p))
+                    {
+                        path = p;
+                    }
+                }
+                if (path == string.Empty)
+                {
+                    return;
+                }
                 Bitmap bm;
-                using (var fs = new FileStream("WBAData\\wall.bmp", FileMode.Open))
+                using (var fs = new FileStream(path, FileMode.Open))
                 {
                     var bmp = new Bitmap(fs);
-                    bm = (Bitmap) bmp.Clone();
+                    bm = (Bitmap)bmp.Clone();
                 }
 
-                _window.Background = new ImageBrush(ToBitmapSource(bm)) {Stretch = Stretch.Uniform};
+                window.Background = new ImageBrush(ToBitmapSource(bm)) { Stretch = Stretch.UniformToFill };
             }
             catch (Exception)
             {
@@ -92,17 +106,17 @@ namespace WBAssistantF.Module.Wallpaper
 
         public void InEffect(Action action)
         {
-            _window.Height = SystemParameters.PrimaryScreenHeight + 14;
-            _window.Width = SystemParameters.PrimaryScreenWidth + 14;
-            _window.Left = -7;
-            _window.Top = -7;
+            window.Height = SystemParameters.PrimaryScreenHeight;
+            window.Width = SystemParameters.PrimaryScreenWidth;
+            window.Left = 0;
+            window.Top = 0;
 
-            _window.InAnimation(action);
+            window.InAnimation(action);
         }
 
         public void OutEffect()
         {
-            _window.OutAnimation();
+            window.OutAnimation();
         }
     }
 }

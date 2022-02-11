@@ -50,6 +50,13 @@ namespace WBAssistantF
             this.columnHeader6 = new System.Windows.Forms.ColumnHeader();
             this.log_tabPage = new System.Windows.Forms.TabPage();
             this.config_tabPage = new System.Windows.Forms.TabPage();
+            this.groupBox4 = new System.Windows.Forms.GroupBox();
+            this.saveShortCutCmd_btn = new System.Windows.Forms.Button();
+            this.label3 = new System.Windows.Forms.Label();
+            this.shortCutCmd_textBox = new System.Windows.Forms.TextBox();
+            this.saveShortCutID_btn = new System.Windows.Forms.Button();
+            this.label6 = new System.Windows.Forms.Label();
+            this.shortCutID_textBox = new System.Windows.Forms.TextBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
             this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.checkBox2 = new System.Windows.Forms.CheckBox();
@@ -99,6 +106,7 @@ namespace WBAssistantF
             this.recent_tabPage.SuspendLayout();
             this.log_tabPage.SuspendLayout();
             this.config_tabPage.SuspendLayout();
+            this.groupBox4.SuspendLayout();
             this.groupBox3.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox1.SuspendLayout();
@@ -126,43 +134,46 @@ namespace WBAssistantF
             this.playVideo_menuItem,
             this.exit_toolStripMenuItem});
             this.notify_menu.Name = "contextMenuStrip_notifyIcon";
-            this.notify_menu.Size = new System.Drawing.Size(192, 136);
+            this.notify_menu.Size = new System.Drawing.Size(185, 136);
             this.notify_menu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.notify_menu_ItemClicked);
             // 
             // mainWindow_notify_menuItem
             // 
             this.mainWindow_notify_menuItem.Name = "mainWindow_notify_menuItem";
-            this.mainWindow_notify_menuItem.Size = new System.Drawing.Size(191, 22);
+            this.mainWindow_notify_menuItem.Size = new System.Drawing.Size(184, 22);
             this.mainWindow_notify_menuItem.Text = "打开主窗口";
             // 
             // refreshWall_notify_menuItem
             // 
             this.refreshWall_notify_menuItem.Name = "refreshWall_notify_menuItem";
-            this.refreshWall_notify_menuItem.Size = new System.Drawing.Size(191, 22);
+            this.refreshWall_notify_menuItem.Size = new System.Drawing.Size(184, 22);
             this.refreshWall_notify_menuItem.Text = "刷新壁纸";
             // 
             // playAudio_menuItem
             // 
+            this.playAudio_menuItem.Enabled = false;
             this.playAudio_menuItem.Name = "playAudio_menuItem";
-            this.playAudio_menuItem.Size = new System.Drawing.Size(191, 22);
+            this.playAudio_menuItem.Size = new System.Drawing.Size(184, 22);
             this.playAudio_menuItem.Text = "播放听力";
             // 
             // EnglishUnitPlusMenuItem
             // 
+            this.EnglishUnitPlusMenuItem.Enabled = false;
             this.EnglishUnitPlusMenuItem.Name = "EnglishUnitPlusMenuItem";
-            this.EnglishUnitPlusMenuItem.Size = new System.Drawing.Size(191, 22);
+            this.EnglishUnitPlusMenuItem.Size = new System.Drawing.Size(184, 22);
             this.EnglishUnitPlusMenuItem.Text = "切换至下一听力单元";
             // 
             // playVideo_menuItem
             // 
+            this.playVideo_menuItem.Enabled = false;
             this.playVideo_menuItem.Name = "playVideo_menuItem";
-            this.playVideo_menuItem.Size = new System.Drawing.Size(191, 22);
+            this.playVideo_menuItem.Size = new System.Drawing.Size(184, 22);
             this.playVideo_menuItem.Text = "播放电视台节目";
             // 
             // exit_toolStripMenuItem
             // 
             this.exit_toolStripMenuItem.Name = "exit_toolStripMenuItem";
-            this.exit_toolStripMenuItem.Size = new System.Drawing.Size(191, 22);
+            this.exit_toolStripMenuItem.Size = new System.Drawing.Size(184, 22);
             this.exit_toolStripMenuItem.Text = "退出";
             // 
             // logTextBox
@@ -206,8 +217,8 @@ namespace WBAssistantF
             // recentFile_listView
             // 
             this.recentFile_listView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
-            this.columnHeader5,
             this.columnHeader4,
+            this.columnHeader5,
             this.columnHeader7,
             this.columnHeader6});
             this.recentFile_listView.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -224,12 +235,10 @@ namespace WBAssistantF
             // 
             // columnHeader5
             // 
-            this.columnHeader5.DisplayIndex = 1;
             this.columnHeader5.Text = "时间";
             // 
             // columnHeader4
             // 
-            this.columnHeader4.DisplayIndex = 0;
             this.columnHeader4.Text = "文件名";
             this.columnHeader4.Width = 200;
             // 
@@ -256,6 +265,7 @@ namespace WBAssistantF
             // config_tabPage
             // 
             this.config_tabPage.AutoScroll = true;
+            this.config_tabPage.Controls.Add(this.groupBox4);
             this.config_tabPage.Controls.Add(this.groupBox3);
             this.config_tabPage.Controls.Add(this.groupBox2);
             this.config_tabPage.Controls.Add(this.groupBox1);
@@ -266,6 +276,73 @@ namespace WBAssistantF
             this.config_tabPage.TabIndex = 1;
             this.config_tabPage.Text = "配置";
             this.config_tabPage.UseVisualStyleBackColor = true;
+            // 
+            // groupBox4
+            // 
+            this.groupBox4.Controls.Add(this.saveShortCutCmd_btn);
+            this.groupBox4.Controls.Add(this.label3);
+            this.groupBox4.Controls.Add(this.shortCutCmd_textBox);
+            this.groupBox4.Controls.Add(this.saveShortCutID_btn);
+            this.groupBox4.Controls.Add(this.label6);
+            this.groupBox4.Controls.Add(this.shortCutID_textBox);
+            this.groupBox4.Location = new System.Drawing.Point(13, 401);
+            this.groupBox4.Name = "groupBox4";
+            this.groupBox4.Size = new System.Drawing.Size(611, 81);
+            this.groupBox4.TabIndex = 11;
+            this.groupBox4.TabStop = false;
+            this.groupBox4.Text = "快捷键";
+            // 
+            // saveShortCutCmd_btn
+            // 
+            this.saveShortCutCmd_btn.Location = new System.Drawing.Point(385, 48);
+            this.saveShortCutCmd_btn.Name = "saveShortCutCmd_btn";
+            this.saveShortCutCmd_btn.Size = new System.Drawing.Size(75, 23);
+            this.saveShortCutCmd_btn.TabIndex = 13;
+            this.saveShortCutCmd_btn.Text = "保存";
+            this.saveShortCutCmd_btn.UseVisualStyleBackColor = true;
+            this.saveShortCutCmd_btn.Click += new System.EventHandler(this.saveShortCutCmd_btn_Click);
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(7, 52);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(83, 15);
+            this.label3.TabIndex = 15;
+            this.label3.Text = "执行cmd命令:";
+            // 
+            // shortCutCmd_textBox
+            // 
+            this.shortCutCmd_textBox.Location = new System.Drawing.Point(115, 48);
+            this.shortCutCmd_textBox.Name = "shortCutCmd_textBox";
+            this.shortCutCmd_textBox.Size = new System.Drawing.Size(264, 23);
+            this.shortCutCmd_textBox.TabIndex = 14;
+            // 
+            // saveShortCutID_btn
+            // 
+            this.saveShortCutID_btn.Location = new System.Drawing.Point(165, 20);
+            this.saveShortCutID_btn.Name = "saveShortCutID_btn";
+            this.saveShortCutID_btn.Size = new System.Drawing.Size(75, 23);
+            this.saveShortCutID_btn.TabIndex = 9;
+            this.saveShortCutID_btn.Text = "保存";
+            this.saveShortCutID_btn.UseVisualStyleBackColor = true;
+            this.saveShortCutID_btn.Click += new System.EventHandler(this.saveShortCutID_btn_Click);
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(7, 23);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(71, 15);
+            this.label6.TabIndex = 12;
+            this.label6.Text = "快捷键序号:";
+            // 
+            // shortCutID_textBox
+            // 
+            this.shortCutID_textBox.Location = new System.Drawing.Point(115, 20);
+            this.shortCutID_textBox.Name = "shortCutID_textBox";
+            this.shortCutID_textBox.Size = new System.Drawing.Size(38, 23);
+            this.shortCutID_textBox.TabIndex = 11;
             // 
             // groupBox3
             // 
@@ -283,7 +360,7 @@ namespace WBAssistantF
             this.checkBox1.AutoSize = true;
             this.checkBox1.Location = new System.Drawing.Point(10, 22);
             this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(205, 19);
+            this.checkBox1.Size = new System.Drawing.Size(198, 19);
             this.checkBox1.TabIndex = 0;
             this.checkBox1.Text = "Windows启动时自动打开本程序";
             this.checkBox1.UseVisualStyleBackColor = true;
@@ -294,7 +371,7 @@ namespace WBAssistantF
             this.checkBox2.AutoSize = true;
             this.checkBox2.Location = new System.Drawing.Point(10, 46);
             this.checkBox2.Name = "checkBox2";
-            this.checkBox2.Size = new System.Drawing.Size(143, 19);
+            this.checkBox2.Size = new System.Drawing.Size(138, 19);
             this.checkBox2.TabIndex = 1;
             this.checkBox2.Text = "程序启动时切换壁纸";
             this.checkBox2.UseVisualStyleBackColor = true;
@@ -323,7 +400,7 @@ namespace WBAssistantF
             this.autoArrange_checkBox.AutoSize = true;
             this.autoArrange_checkBox.Location = new System.Drawing.Point(10, 70);
             this.autoArrange_checkBox.Name = "autoArrange_checkBox";
-            this.autoArrange_checkBox.Size = new System.Drawing.Size(130, 19);
+            this.autoArrange_checkBox.Size = new System.Drawing.Size(125, 19);
             this.autoArrange_checkBox.TabIndex = 10;
             this.autoArrange_checkBox.Text = "自动整理桌面图标";
             this.autoArrange_checkBox.UseVisualStyleBackColor = true;
@@ -334,7 +411,7 @@ namespace WBAssistantF
             this.reject_new_device_checkBox.AutoSize = true;
             this.reject_new_device_checkBox.Location = new System.Drawing.Point(11, 46);
             this.reject_new_device_checkBox.Name = "reject_new_device_checkBox";
-            this.reject_new_device_checkBox.Size = new System.Drawing.Size(117, 19);
+            this.reject_new_device_checkBox.Size = new System.Drawing.Size(113, 19);
             this.reject_new_device_checkBox.TabIndex = 9;
             this.reject_new_device_checkBox.Text = "拒绝新设备写入";
             this.reject_new_device_checkBox.UseVisualStyleBackColor = true;
@@ -345,7 +422,7 @@ namespace WBAssistantF
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(7, 94);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(49, 15);
+            this.label1.Size = new System.Drawing.Size(46, 15);
             this.label1.TabIndex = 3;
             this.label1.Text = "拓展名:";
             // 
@@ -361,7 +438,7 @@ namespace WBAssistantF
             this.checkBox3.AutoSize = true;
             this.checkBox3.Location = new System.Drawing.Point(11, 22);
             this.checkBox3.Name = "checkBox3";
-            this.checkBox3.Size = new System.Drawing.Size(229, 19);
+            this.checkBox3.Size = new System.Drawing.Size(218, 19);
             this.checkBox3.TabIndex = 8;
             this.checkBox3.Text = "USB插入时自动打开文件资源管理器";
             this.checkBox3.UseVisualStyleBackColor = true;
@@ -392,7 +469,7 @@ namespace WBAssistantF
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(7, 124);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(62, 15);
+            this.label2.Size = new System.Drawing.Size(58, 15);
             this.label2.TabIndex = 6;
             this.label2.Text = "保存路径:";
             // 
@@ -436,7 +513,7 @@ namespace WBAssistantF
             this.label5.AutoSize = true;
             this.label5.Location = new System.Drawing.Point(7, 104);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(101, 15);
+            this.label5.Size = new System.Drawing.Size(95, 15);
             this.label5.TabIndex = 15;
             this.label5.Text = "英语材料文件名:";
             // 
@@ -462,7 +539,7 @@ namespace WBAssistantF
             this.label4.AutoSize = true;
             this.label4.Location = new System.Drawing.Point(7, 75);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(62, 15);
+            this.label4.Size = new System.Drawing.Size(60, 15);
             this.label4.TabIndex = 12;
             this.label4.Text = "英语单元:";
             // 
@@ -478,7 +555,7 @@ namespace WBAssistantF
             this.checkBox5.AutoSize = true;
             this.checkBox5.Location = new System.Drawing.Point(10, 46);
             this.checkBox5.Name = "checkBox5";
-            this.checkBox5.Size = new System.Drawing.Size(195, 19);
+            this.checkBox5.Size = new System.Drawing.Size(179, 19);
             this.checkBox5.TabIndex = 4;
             this.checkBox5.Text = "周二、周四播放英语听力材料";
             this.checkBox5.UseVisualStyleBackColor = true;
@@ -489,7 +566,7 @@ namespace WBAssistantF
             this.checkBox4.AutoSize = true;
             this.checkBox4.Location = new System.Drawing.Point(11, 22);
             this.checkBox4.Name = "checkBox4";
-            this.checkBox4.Size = new System.Drawing.Size(195, 19);
+            this.checkBox4.Size = new System.Drawing.Size(187, 19);
             this.checkBox4.TabIndex = 3;
             this.checkBox4.Text = "周一自动下载播放电视台节目";
             this.checkBox4.UseVisualStyleBackColor = true;
@@ -562,7 +639,7 @@ namespace WBAssistantF
             this.no_result_label.AutoSize = true;
             this.no_result_label.Location = new System.Drawing.Point(260, 159);
             this.no_result_label.Name = "no_result_label";
-            this.no_result_label.Size = new System.Drawing.Size(98, 15);
+            this.no_result_label.Size = new System.Drawing.Size(88, 15);
             this.no_result_label.TabIndex = 7;
             this.no_result_label.Text = "找不到该文件。";
             this.no_result_label.Visible = false;
@@ -581,7 +658,7 @@ namespace WBAssistantF
             this.linkLabel1.AutoSize = true;
             this.linkLabel1.Location = new System.Drawing.Point(353, 10);
             this.linkLabel1.Name = "linkLabel1";
-            this.linkLabel1.Size = new System.Drawing.Size(150, 15);
+            this.linkLabel1.Size = new System.Drawing.Size(142, 15);
             this.linkLabel1.TabIndex = 4;
             this.linkLabel1.TabStop = true;
             this.linkLabel1.Text = "在文件资源浏览器中打开";
@@ -611,7 +688,7 @@ namespace WBAssistantF
             this.volumeName_label.AutoSize = true;
             this.volumeName_label.Location = new System.Drawing.Point(6, 10);
             this.volumeName_label.Name = "volumeName_label";
-            this.volumeName_label.Size = new System.Drawing.Size(46, 15);
+            this.volumeName_label.Size = new System.Drawing.Size(45, 15);
             this.volumeName_label.TabIndex = 1;
             this.volumeName_label.Text = "设备名";
             // 
@@ -638,41 +715,41 @@ namespace WBAssistantF
             this.toolStripSeparator2,
             this.removeAll_usbInfo_menuItem});
             this.usbInfo_menu.Name = "usbInfo_menu";
-            this.usbInfo_menu.Size = new System.Drawing.Size(187, 104);
+            this.usbInfo_menu.Size = new System.Drawing.Size(181, 104);
             this.usbInfo_menu.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.usbInfo_menu_ItemClicked);
             // 
             // exclude_usbInfo_menuItem
             // 
             this.exclude_usbInfo_menuItem.Name = "exclude_usbInfo_menuItem";
-            this.exclude_usbInfo_menuItem.Size = new System.Drawing.Size(186, 22);
+            this.exclude_usbInfo_menuItem.Size = new System.Drawing.Size(180, 22);
             this.exclude_usbInfo_menuItem.Text = "移除/加入 白名单";
             // 
             // remove_usbInfo_menuItem
             // 
             this.remove_usbInfo_menuItem.Name = "remove_usbInfo_menuItem";
-            this.remove_usbInfo_menuItem.Size = new System.Drawing.Size(186, 22);
+            this.remove_usbInfo_menuItem.Size = new System.Drawing.Size(180, 22);
             this.remove_usbInfo_menuItem.Text = "删除信息";
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(183, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(177, 6);
             // 
             // removeFileTree_usbInfo_menuItem
             // 
             this.removeFileTree_usbInfo_menuItem.Name = "removeFileTree_usbInfo_menuItem";
-            this.removeFileTree_usbInfo_menuItem.Size = new System.Drawing.Size(186, 22);
+            this.removeFileTree_usbInfo_menuItem.Size = new System.Drawing.Size(180, 22);
             this.removeFileTree_usbInfo_menuItem.Text = "移除此文件树版本";
             // 
             // toolStripSeparator2
             // 
             this.toolStripSeparator2.Name = "toolStripSeparator2";
-            this.toolStripSeparator2.Size = new System.Drawing.Size(183, 6);
+            this.toolStripSeparator2.Size = new System.Drawing.Size(177, 6);
             // 
             // removeAll_usbInfo_menuItem
             // 
             this.removeAll_usbInfo_menuItem.Name = "removeAll_usbInfo_menuItem";
-            this.removeAll_usbInfo_menuItem.Size = new System.Drawing.Size(186, 22);
+            this.removeAll_usbInfo_menuItem.Size = new System.Drawing.Size(180, 22);
             this.removeAll_usbInfo_menuItem.Text = "移除该USB所有数据";
             // 
             // columnHeader1
@@ -714,6 +791,8 @@ namespace WBAssistantF
             this.recent_tabPage.ResumeLayout(false);
             this.log_tabPage.ResumeLayout(false);
             this.config_tabPage.ResumeLayout(false);
+            this.groupBox4.ResumeLayout(false);
+            this.groupBox4.PerformLayout();
             this.groupBox3.ResumeLayout(false);
             this.groupBox3.PerformLayout();
             this.groupBox2.ResumeLayout(false);
@@ -794,6 +873,13 @@ namespace WBAssistantF
         private System.Windows.Forms.ColumnHeader columnHeader5;
         private System.Windows.Forms.ColumnHeader columnHeader6;
         private System.Windows.Forms.ColumnHeader columnHeader7;
+        private System.Windows.Forms.GroupBox groupBox4;
+        private System.Windows.Forms.Button saveShortCutCmd_btn;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.TextBox shortCutCmd_textBox;
+        private System.Windows.Forms.Button saveShortCutID_btn;
+        private System.Windows.Forms.Label label6;
+        private System.Windows.Forms.TextBox shortCutID_textBox;
     }
 }
 

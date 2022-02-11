@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows7.0</TargetFramework>
+    <TargetFramework>net6.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <!-- <PublishTrimmed>true</PublishTrimmed> -->
     <!-- <TrimMode>link</TrimMode> -->
@@ -23,6 +23,15 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="KeyboardDetect\**" />
+    <Compile Remove="NewFolder\**" />
+    <EmbeddedResource Remove="KeyboardDetect\**" />
+    <EmbeddedResource Remove="NewFolder\**" />
+    <None Remove="KeyboardDetect\**" />
+    <None Remove="NewFolder\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <None Remove="icon\tray.ico" />
